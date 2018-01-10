@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/linearLayout1">
+        <TextView
+            android:text="PestPac Username:"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:id="@+id/textView1"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent" />
+        <EditText
+            android:id="@+id/editText1"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginRight="166.0dp" />
+    </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/linearLayout2">
+        <TextClock xmlns:p2="http://xamarin.com/mono/android/designer-default"
+            android:id="@+id/textClock1"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:textSize="32dp"
+            android:layout_marginLeft="0.0dp" />
+    </LinearLayout>
+    <ToggleButton
+        android:layout_width="match_parent"
+        android:layout_height="58.0dp"
+        android:id="@+id/toggleButton1"
+        android:textOff="START DAY"
+        android:textOn="END DAY"
+        android:textStyle="bold"
+        android:textSize="32dp"
+        android:typeface="monospace"
+        android:hapticFeedbackEnabled="true"
+        android:backgroundTint="#ffebeb0f"
+        android:layout_marginBottom="3.0dp" />
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/linearLayout3"
+        android:minHeight="72dp">
+        <TextView
+            android:text="GO ON BREAK"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:id="@+id/textView2"
+            android:layout_marginTop="28.0dp"
+            android:textColor="@android:color/white"
+            android:typeface="monospace" />
+        <Switch
+            android:id="@+id/switch1"
+            android:alpha="1"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="96.0dp"
+            android:layout_marginBottom="0.0dp"
+            android:backgroundTint="#ffebeb0f"
+            android:thumbTint="#ffebeb0f"
+            android:scaleX="3.5"
+            android:scaleY="3"
+            android:layout_marginTop="7.0dp"
+            android:enabled="false" />
+    </LinearLayout>
+    <RadioGroup
+        android:minWidth="25px"
+        android:minHeight="75px"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/radioGroup1"
+        android:backgroundTint="#00000000"
+        android:hapticFeedbackEnabled="true"
+        android:layout_marginTop="32dp">
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Break greater than 10 minutes"
+            android:id="@+id/radioButton1"
+            android:enabled="false" />
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Break less than 10 minutes"
+            android:id="@+id/radioButton2"
+            android:checked="false"
+            android:enabled="false" />
+        <RadioButton
+            android:text="Family Medical and Leave Act (HR Approved)"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/radioButton7"
+            android:enabled="false" />
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lunch, meal, or personal time"
+            android:id="@+id/radioButton3"
+            android:enabled="false" />
+    </RadioGroup>
+    <RadioButton
+        android:text="Oil change less than 30 minutes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/radioButton4"
+        android:enabled="false" />
+    <ProgressBar
+        style="?android:attr/progressBarStyleSmall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/progressBar1" />
+    <RadioButton
+        android:text="POL not paid time off"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/radioButton5"
+        android:enabled="false" />
+    <RadioButton
+        android:text="POL paid time off"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/radioButton6"
+        android:enabled="false" />
+    <RadioButton
+        android:text="Sick not paid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/radioButton8"
+        android:enabled="false" />
+    <RadioButton
+        android:text="Sick paid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/radioButton9"
+        android:enabled="false" />
+</LinearLayout>

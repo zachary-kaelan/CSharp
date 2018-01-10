@@ -1,0 +1,8 @@
+{
+  "Eval": "MyCode",
+  "Function": "LibraryCode",
+  "ScriptBlock": "UnrelatedCode",
+  "MyCode": [],
+  "Libraries": [ "*index.js" ],
+  "Unrelated": []
+}

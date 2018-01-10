@@ -1,0 +1,9 @@
+Break less than 10 minutes :=: 1
+Break greater than 10 minutes :=: 2
+Sick paid :=: 3
+Sick not paid :=: 4
+Lunch, meal, or personal time :=: 5
+Oil change less than 30 minutes :=: 6
+POL paid time off :=: 7
+POL not paid time off :=: 8
+Family Medical and Leave Act (HR Approved) :=: 9

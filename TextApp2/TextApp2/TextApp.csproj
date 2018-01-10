@@ -1,0 +1,140 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{956902CD-9A75-456A-AF6F-972A035187D2}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>TextApp</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Core" />
+    <Reference Include="RestSharp" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System" />
+    <Reference Include="Keyoti.RapidSpell.NET2" />
+    <Reference Include="CsvHelper" />
+    <Reference Include="AutoUpdater.NET" />
+    <Reference Include="MutexManager" />
+    <Reference Include="Newtonsoft.Json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TaskBarApp.Objects\AccountItem.cs" />
+    <Compile Include="TaskBarApp.Objects\ConnectionStatus.cs" />
+    <Compile Include="TaskBarApp.Objects\Contact.cs" />
+    <Compile Include="TaskBarApp.Objects\ContactBlockResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\ContactDeleteResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\ContactListResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\ContactSaveResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\Conversation.cs" />
+    <Compile Include="TaskBarApp.Objects\ConversationDeleteResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\ConversationGet.cs" />
+    <Compile Include="TaskBarApp.Objects\ConversationList.cs" />
+    <Compile Include="TaskBarApp.Objects\ConversationMetaData.cs" />
+    <Compile Include="TaskBarApp.Objects\ConversationResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\GroupTagContact.cs" />
+    <Compile Include="TaskBarApp.Objects\MMSAttachment.cs" />
+    <Compile Include="TaskBarApp.Objects\MMSImage.cs" />
+    <Compile Include="TaskBarApp.Objects\MMSSend.cs" />
+    <Compile Include="TaskBarApp.Objects\MMSSendResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\RootObject.cs" />
+    <Compile Include="TaskBarApp.Objects\ScheduleFileItem.cs" />
+    <Compile Include="TaskBarApp.Objects\Session.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessage.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessageAttachment.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessageAttachmentList.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessageDeleteResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessageList.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessageReadResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessageSendResponse.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessageSendResponseDetails.cs" />
+    <Compile Include="TaskBarApp.Objects\TextMessageSendResponseToken.cs" />
+    <Compile Include="TaskBarApp.Objects\TransmissionState.cs" />
+    <Compile Include="TaskBarApp.Objects\UpdateGet.cs" />
+    <Compile Include="TaskBarApp.Objects\UserSession.cs" />
+    <Compile Include="TaskBarApp.Properties\Resources.cs" />
+    <Compile Include="TaskBarApp.Properties\Settings.cs" />
+    <Compile Include="TaskBarApp\ApplicationManager.cs" />
+    <Compile Include="TaskBarApp\AppRegistry.cs" />
+    <Compile Include="TaskBarApp\fmAccountDashboard.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmEditAccounts.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmEditContacts.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmEditGroups.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmEditGroupSchedule.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmGroupSchedule.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmKeywordAutoResponse.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmMessages.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmMessageTemplate.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmNewMessage.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmPrintConversation.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\fmUserLogin.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TaskBarApp\Program.cs" />
+    <Compile Include="TaskBarApp\StringExtensions.cs" />
+    <Compile Include="TaskBarApp\TaskBarApplication.cs" />
+    <Compile Include="Zipwhip\TextService.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="TaskBarApp.Properties\Resources.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmAccountDashboard.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmEditAccounts.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmEditContacts.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmEditGroups.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmEditGroupSchedule.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmGroupSchedule.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmKeywordAutoResponse.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmMessages.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmMessageTemplate.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmNewMessage.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmPrintConversation.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmSettings.resx" />
+    <EmbeddedResource Include="TaskBarApp\fmUserLogin.resx" />
+    <EmbeddedResource Include="TextApp.exe.licenses" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
