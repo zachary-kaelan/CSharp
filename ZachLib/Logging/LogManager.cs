@@ -30,7 +30,7 @@ namespace ZachLib.Logging
                     JSON.Deserialize<IEnumerable<LogUpdate>>(File.ReadAllText(QUEUE_PATH)) :
                     Enumerable.Empty<LogUpdate>()
             );
-            "[{0}] [{1}]:\t{2} ~ {3}"
+            Format = "[{0}] [{1}]:\t{2} ~ {3}";
             isRunning = false;
         }
 
@@ -151,7 +151,7 @@ namespace ZachLib.Logging
 
         public static void SetGlobalFormat(string entryFormat)
         {
-            Format = entryFormat
+            Format = entryFormat;
         }
         #endregion
 
@@ -299,6 +299,7 @@ namespace ZachLib.Logging
                         }
                     );
                     SpinWait.SpinUntil(() => queue.IsEmpty);
+                    GC.Collect();
                 }
                 
                 loggerThread.Abort();
@@ -419,11 +420,16 @@ namespace ZachLib.Logging
                         {
                             if (logs.TryGetValue(update.LogName, out Log log))
                             {
-                                if (!log.TryLogEntry(log[update]))
+                                string entry = log[update];
+                                if (!log.TryLogEntry(entry))
                                     ++FileEntriesNotLogged;
+                                else
+                                    OnEntry(null, update.LogName, entry);
                             }
                             else
                                 Enqueue("LogManager", EntryType.ERROR, new object[] { update.LogName, "Could not find a log of this name." });
+
+                            update.Dispose();
                         }
                     }
                 }

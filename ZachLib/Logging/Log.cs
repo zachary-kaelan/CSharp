@@ -24,7 +24,7 @@ namespace ZachLib.Logging
         Multiple
     };
 
-    public class Log : FileSystemInfo, IDictionary<EntryType, Func<LogUpdate, string>>, IDisposable
+    public class Log : IDictionary<EntryType, Func<LogUpdate, string>>, IDisposable
     {
         private const string FILE_DIVISOR = "\r\n\r\n\t\t~~~\t\t\r\n\r\n";
         private static readonly string TODAY = DateTime.Now.ToString("MM.dd.yyyy") + ".txt";
@@ -39,7 +39,7 @@ namespace ZachLib.Logging
         private bool isInitialized { get; set; }
         public string Path { get; private set; }
         public string DataPath { get; private set; }
-        private string logName { get; set; }
+        public string Name { get; private set; }
         private StreamWriter LogStream { get; set; }
 
         public Func<LogUpdate, string> FormatEntry { get; private set; }
@@ -69,7 +69,7 @@ namespace ZachLib.Logging
 
         public Log(LogType type, string name) : this(type)
         {
-            this.logName = String.IsNullOrWhiteSpace(name) ? type.ToString() : name;
+            this.Name = String.IsNullOrWhiteSpace(name) ? type.ToString() : name;
         }
 
         public Log(LogType type, string name, EntryType singleType, Func<LogUpdate, string> format) : this(type, name)
@@ -115,7 +115,7 @@ namespace ZachLib.Logging
             {
                 Formatting = FormattingType.Single;
                 var single = EntryFormatters.Single();
-                FormatEntry = single.Value == null ? (u => ) : single.Value;
+                FormatEntry = single.Value;
             }
             else if (EntryFormatters.Any())
             {
@@ -128,15 +128,15 @@ namespace ZachLib.Logging
                 FormatEntry = u => LogManager.FormatEntryUsingDefault(u);
             }
 
-            if (String.IsNullOrWhiteSpace(logName))
+            if (String.IsNullOrWhiteSpace(Name))
             {
                 if (Formatting == FormattingType.Single)
-                    logName = EntryFormatters.Single().Key.ToString();
+                    Name = EntryFormatters.Single().Key.ToString();
                 else
-                    logName = Type.ToString();
+                    Name = Type.ToString();
             }
 
-            Path += logName;
+            Path += Name;
 
             if (Type == LogType.SingleFile || Type == LogType.SingleFileNonLog)
             {
@@ -151,6 +151,8 @@ namespace ZachLib.Logging
                 if (!Directory.Exists(Path))
                     Directory.CreateDirectory(Path);
                 DataPath = Path + (Type == LogType.FolderFilesNonLog ? "" : @"ErroneousObjects\");
+                if (!Directory.Exists(DataPath))
+                    Directory.CreateDirectory(DataPath);
 
                 if (Type == LogType.FolderFilesByDate)
                 {
@@ -158,28 +160,6 @@ namespace ZachLib.Logging
                     LogStream = new StreamWriter(Path, true);
                 }
             }
-        }
-#endregion
-
-        #region FileSystemInfo
-        public override string Name => name;
-
-        public override bool Exists => true;
-
-        public override void Delete()
-        {
-            if (Type == LogType.SingleFile | Type == LogType.SingleFileNonLog)
-            {
-                if (LogStream != null)
-                {
-                    LogStream.Close();
-                    LogStream = null;
-                }
-                File.Delete(Path);
-            }
-            else
-                Directory.Delete(Path);
-                
         }
 #endregion
 
@@ -263,7 +243,7 @@ namespace ZachLib.Logging
                     EntryFormat = null;
                     TimeFormat = null;
                     Path = null;
-                    logName = null;
+                    Name = null;
                 }
 
                 EntryFormatters.Clear();

@@ -77,11 +77,11 @@
     <Compile Include="EnumClass.cs" />
     <Compile Include="EnumExtensions.cs" />
     <Compile Include="GUIExtensions.cs" />
-    <Compile Include="HtmlUtils.cs" />
+    <Compile Include="HTTP\HtmlUtils.cs" />
+    <Compile Include="HTTP\RestsharpExtensions.cs" />
     <Compile Include="IOExtensions.cs" />
-    <Compile Include="HttpExtensions.cs" />
+    <Compile Include="HTTP\HttpExtensions.cs" />
     <Compile Include="Logging\Log.cs" />
-    <Compile Include="Logging\LogFormatting.cs" />
     <Compile Include="Logging\LogManager.cs" />
     <Compile Include="Logging\LogUpdate.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

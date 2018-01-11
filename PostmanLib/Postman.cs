@@ -15,6 +15,8 @@ using PestPac.Model;
 using PostmanLib.Properties;
 using PPLib;
 using RestSharp;
+//using ZachLib;
+using ZachLib.Logging;
 
 namespace PostmanLib
 {
@@ -36,6 +38,13 @@ namespace PostmanLib
 
         static Postman()
         {
+            LogManager.AddLog(
+                "Postman",
+                LogType.FolderFilesByDate
+            );
+
+            OnExecute += Postman_OnExecute;
+
             tokenClient.AddDefaultHeader("authorization", "Bearer N2JWMU9wRjFmT1FDSVRNam1fWmpsNjJkcFFZYTpjdXJueTNXb3g0ZUdpREdKTWhWdUI3OVhSSVlh");
             tokenClient.AddDefaultParameter("grant_type", "refresh_token");
             tokenClient.AddDefaultParameter("refresh_token", REFRESH_TOKEN);
@@ -49,6 +58,26 @@ namespace PostmanLib
 
             if (DateTime.Compare(Settings.Default.expires_in, now) <= 0 || String.IsNullOrWhiteSpace(Settings.Default.access_token))
                 GetToken(now);
+        }
+
+        private static void Postman_OnExecute(object sender, ExecutionEventArgs e)
+        {
+            if (!e.ResponseCode.IsOK())
+            {
+                if (e.ResponseCode == HttpStatusCode.NotImplemented)
+                {
+                    RestRequest request = (RestRequest)sender;
+                    LogManager.Enqueue(
+                        "Postman",
+                        
+
+                    );
+                }
+                LogManager.Enqueue(
+                    "Postman",
+                    EntryType.HTTP
+                );
+            }
         }
 
         private static void GetToken(DateTime now)
@@ -122,7 +151,7 @@ namespace PostmanLib
             try
             {
                 IRestResponse response = client.Execute(request);
-                eventargs.ResponseCode = response.StatusCode.ToString();
+                eventargs.ResponseCode = response.StatusCode;
                 
                 content = response.Content;
                 if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -149,7 +178,7 @@ namespace PostmanLib
             {
                 if (WaitForInternet())
                 {
-                    eventargs.ResponseCode = HttpStatusCode.ServiceUnavailable.ToString();
+                    eventargs.ResponseCode = HttpStatusCode.ServiceUnavailable;
                     eventargs.Message = "Internet was down. Retrying...";
                     OnExecute(request, eventargs);
                     return TryExecute(request, out content);
@@ -158,7 +187,8 @@ namespace PostmanLib
                 content = null;
                 while (e.InnerException != null && !String.IsNullOrWhiteSpace(e.InnerException.Message))
                     e = e.InnerException;
-                eventargs.ResponseCode = e.HResult.ToString();
+                eventargs.ResponseCode = HttpStatusCode.NotImplemented;
+                eventargs.Data = e;
                 eventargs.Message = e.Message;
                 OnExecute(request, eventargs);
 
@@ -394,8 +424,9 @@ namespace PostmanLib
 
     public class ExecutionEventArgs : EventArgs
     {
-        public string ResponseCode { get; set; }
+        public HttpStatusCode ResponseCode { get; set; }
         public string URL { get; set; }
         public string Message { get; set; }
+        public object Data { get; set; }
     }
 }
