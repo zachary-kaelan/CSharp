@@ -67,7 +67,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="ZachLib">
       <HintPath>..\..\ZachLib\bin\Debug\ZachLib.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
     </Reference>
   </ItemGroup>
   <ItemGroup>
