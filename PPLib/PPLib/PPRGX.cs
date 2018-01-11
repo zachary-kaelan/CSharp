@@ -17,24 +17,14 @@ namespace PPLib
 {
     public static class PPRGX
     {
-        
-
-        public static readonly Phone PHONE = new Phone();
-        public static readonly FileDigit FILE_NUM = new FileDigit();
         public static readonly HasFilenameInfo HAS_FILE_INFO = new HasFilenameInfo();
-        public static readonly FileDictionary FILE_DICT = new FileDictionary();
         public static readonly Names NAMES = new Names();
         public static readonly LocInfo LOC_INFO = new LocInfo();
-        public static readonly Symbols SYMBOLS = new Symbols();
-        public static readonly SecondaryFormatting FORMATTING = new SecondaryFormatting();
 
         // ~~ HTML
-        public static readonly Links HTML_LINKS = new Links();
-        public static readonly InteractionsTemp PARAGRAPHS = new InteractionsTemp();
         public static readonly Token TOKEN = new Token();
         public static readonly ListElements LIST = new ListElements();
         public static readonly URLCode URL_CODE = new URLCode();
-        public static readonly WebTags HTML_TAGS = new WebTags();
 
         public static readonly InvoiceID INVOICE_ID = new InvoiceID();
         public static readonly InvoiceInfo INVOICE_INFO = new InvoiceInfo();

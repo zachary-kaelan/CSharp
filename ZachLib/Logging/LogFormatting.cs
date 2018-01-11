@@ -12,66 +12,51 @@ namespace ZachLib.Logging
     {
         private const string NEW_LINE = "\r\n\t\t\t\t\t";
 
-        private static string GlobalFormatting(LogUpdate update)
+        private static LogEntry GlobalFormatting(LogUpdate update)
         {
-            if (update.Type == EntryType.DICTIONARY)
-                logs[update.LogName].WriteLineAsync(update.LogContent.Single().ToString());
+            if (update.Type == EntryType.DictionaryEntry)
+                return new LogEntry()
+                {
+                    Type = EntryType.DICTIONARY,
+                    Entry = update.LogContent.Single().ToString(),
+                    IsFile = false,
+                    LogName = update.LogName
+                };
             else
             {
-                string time = update.Timestamp.ToString(timeFormat);
+                string time = LogManager.GetDefaultTimeFormat(update.Timestamp);
 
                 if (update.Type == EntryType.HTTP)
-                    return GlobalHTTP(update);
+                    return new LogEntry()
+                    {
+                        Entry = GlobalHTTP(update),
+                        LogName = update.LogName,
+                        IsFile = false,
+                        Type = EntryType.HTTP
+                    };
+                else if (update.FileContent.Length > 0)
+                    return update.Type == EntryType.DATA ? GlobalDATA(update) : GlobalFILE(update);
                 else
-                {
-                    if (update.FileContent.Length > 0)
+                    return new LogEntry()
                     {
-                        string filename = logDirectories[update.LogName] + update.LogContent.First().ToString() + ".txt";
-                        File.WriteAllText(
-                            filename,
-                            String.Join(
-                                NEW_LINE,
-                                update.FileContent.Select(
-                                    o => JSON.Serialize(o)
-                                )
-                            )
-                        );
-
-                        if (update.Type != EntryType.DATA)
-                        {
-                            string entry = String.Format(
-                                format,
-                                time,
-                                update.Type.ToString(),
-                                update.File,
-                                Path.GetDirectoryName(filename) + filename
-                            );
-                            OnEntry(this, update.LogName, entry);
-                            logs[update.LogName].WriteLineAsync(entry);
-                            entry = null;
-                        }
-                    }
-
-                    if (update.LogContent.Length > 0)
-                    {
-                        string entry = String.Format(
-                            format,
-                            time,
-                            update.Type.ToString(),
-                            update.File,
-                            String.Join(
-                                NEW_LINE,
-                                update.LogContent
-                            )
-                        );
-                        OnEntry(this, update.LogName, entry);
-                        logs[update.LogName].WriteLineAsync(entry);
-                    }
-                }
+                        Entry = GlobalGeneric(update),
+                        LogName = update.LogName,
+                        Type = update.Type,
+                        IsFile = false
+                    };
             }
         }
 
+        #region Generic
+        public static string GlobalGeneric(LogUpdate update)
+        {
+            return GlobalGeneric(update, LogManager.Format);
+        }
 
+        public static string GlobalGeneric(LogUpdate update, string format)
+        {
+            return GlobalGeneric(update, format, LogManager.GetDefaultTimeFormat());
+        }
 
         public static string GlobalGeneric(LogUpdate update, string format, string time)
         {
@@ -86,6 +71,7 @@ namespace ZachLib.Logging
                 )
             );
         }
+#endregion
 
         #region DATA/FILE
         public static LogEntry GlobalDATA(LogUpdate update)
@@ -93,6 +79,7 @@ namespace ZachLib.Logging
             LogEntry logEntry = new LogEntry();
             logEntry.LogName = update.LogName;
             logEntry.FileName = update.LogContent.First().ToString();
+            logEntry.IsFile = true;
             logEntry.FileContent = String.Join(
                 NEW_LINE,
                 update.FileContent.Select(
@@ -104,7 +91,15 @@ namespace ZachLib.Logging
             return logEntry;
         }
 
-        public static LogEntry GlobalFILE
+        public static LogEntry GlobalFILE(LogUpdate update)
+        {
+            return GlobalFILE(update, LogManager.Format);
+        }
+
+        public static LogEntry GlobalFILE(LogUpdate update, string format)
+        {
+            return GlobalFILE(update, format, LogManager.GetDefaultTimeFormat());
+        }
 
         public static LogEntry GlobalFILE(LogUpdate update, string format, string time)
         {
@@ -128,12 +123,12 @@ namespace ZachLib.Logging
         #region HTTP
         public static string GlobalHTTP(LogUpdate update)
         {
-            return GlobalHTTP(update, LogManager.Format, DateTime.Now.ToString(LogManager.TimeFormat));
+            return GlobalHTTP(update, LogManager.Format, LogManager.GetDefaultTimeFormat());
         }
 
         public static string GlobalHTTP(LogUpdate update, string format)
         {
-            return GlobalHTTP(update, format, DateTime.Now.ToString(LogManager.TimeFormat));
+            return GlobalHTTP(update, format, LogManager.GetDefaultTimeFormat());
         }
 
         public static string GlobalHTTP(LogUpdate update, string format, string time)
@@ -155,9 +150,8 @@ namespace ZachLib.Logging
 
     public struct LogEntry
     {
-        public EntryType Type { get; set; }
         public string LogName { get; set; }
-        public string IsFile { get; set; }
+        public bool IsFile { get; set; }
         public string FileName { get; set; }
         public string Entry { get; set; }
         public string FileContent { get; set; }

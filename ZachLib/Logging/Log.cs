@@ -26,25 +26,40 @@ namespace ZachLib.Logging
 
     public class Log : FileSystemInfo, IDictionary<EntryType, Func<LogUpdate, string>>, IDisposable
     {
+        private const string FILE_DIVISOR = "\r\n\r\n\t\t~~~\t\t\r\n\r\n";
         private static readonly string TODAY = DateTime.Now.ToString("MM.dd.yyyy") + ".txt";
 
         public string EntryFormat { get; set; }
         public string TimeFormat { get; set; }
         public FormattingType Formatting { get; set; }
         public LogType Type { get; set; }
+        public bool LogFileEntries { get; private set; }
         private Dictionary<EntryType, Func<LogUpdate, string>> EntryFormatters { get; set; }
 
-        private string Path { get; set; }
+        private bool isInitialized { get; set; }
+        public string Path { get; private set; }
+        public string DataPath { get; private set; }
         private string logName { get; set; }
         private StreamWriter LogStream { get; set; }
 
         public Func<LogUpdate, string> FormatEntry { get; private set; }
+        public string this[LogUpdate update] { get => Formatting == FormattingType.Single ? FormatEntry(update) : EntryFormatters[update.Type](update); }
+        public bool TryLogEntry(string entry)
+        {
+            if ((Type == LogType.SingleFile || Type == LogType.SingleFileNonLog || Type == LogType.FolderFilesByDate) && !String.IsNullOrWhiteSpace(entry))
+                LogStream.TryWriteLineAsync(entry);
+            else
+                return false;
+            return true;
+        }
 
         #region Initialization
         #region Constructors
-        public Log() : base()
+        private Log() : base()
         {
             EntryFormatters = new Dictionary<EntryType, Func<LogUpdate, string>>();
+            LogFileEntries = false;
+            isInitialized = false;
         }
 
         public Log(LogType type) : this()
@@ -62,7 +77,10 @@ namespace ZachLib.Logging
             EntryFormatters.Add(singleType, format);
         }
 
-        public Log(LogType type, EntryType singleType, Func<LogUpdate, string> format) : this(type, singleType.ToString(), singleType, format) { }
+        public Log(LogType type, EntryType singleType, Func<LogUpdate, string> format = null, bool logFileEntries = true) : this(type, singleType.ToString(), singleType, format)
+        {
+            LogFileEntries = logFileEntries;
+        }
 
         public Log(LogType type, string name, IEnumerable<KeyValuePair<EntryType, Func<LogUpdate, string>>> formats) : this(type, name)
         {
@@ -88,12 +106,16 @@ namespace ZachLib.Logging
 
         public void Initialize()
         {
-            Path = LogManager.CURSESSION_PATH + logName;
+            if (isInitialized)
+                return;
+            isInitialized = true;
+            Path = LogManager.CURSESSION_PATH;
+
             if (EntryFormatters.Count() == 1)
             {
                 Formatting = FormattingType.Single;
                 var single = EntryFormatters.Single();
-                FormatEntry = single.Value;
+                FormatEntry = single.Value == null ? (u => ) : single.Value;
             }
             else if (EntryFormatters.Any())
             {
@@ -103,6 +125,7 @@ namespace ZachLib.Logging
             else
             {
                 Formatting = FormattingType.Global;
+                FormatEntry = u => LogManager.FormatEntryUsingDefault(u);
             }
 
             if (String.IsNullOrWhiteSpace(logName))
@@ -113,16 +136,21 @@ namespace ZachLib.Logging
                     logName = Type.ToString();
             }
 
+            Path += logName;
+
             if (Type == LogType.SingleFile || Type == LogType.SingleFileNonLog)
             {
                 Path += ".txt";
                 LogStream = new StreamWriter(Path, true);
+                if (Type == LogType.SingleFile)
+                    LogStream.NewLine = FILE_DIVISOR;
             }
             else
             {
                 Path += @"\";
                 if (!Directory.Exists(Path))
                     Directory.CreateDirectory(Path);
+                DataPath = Path + (Type == LogType.FolderFilesNonLog ? "" : @"ErroneousObjects\");
 
                 if (Type == LogType.FolderFilesByDate)
                 {
@@ -231,21 +259,31 @@ namespace ZachLib.Logging
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects).
+                    FormatEntry = null;
+                    EntryFormat = null;
+                    TimeFormat = null;
+                    Path = null;
+                    logName = null;
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
+                EntryFormatters.Clear();
+                EntryFormatters = null;
+                if (LogStream != null)
+                {
+                    LogStream.Flush();
+                    LogStream.Close();
+                    LogStream = null;
+                }
 
                 disposedValue = true;
             }
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~Log() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
+        //TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        ~Log() {
+          // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+          Dispose(false);
+        }
 
         // This code added to correctly implement the disposable pattern.
         public void Dispose()
@@ -253,7 +291,7 @@ namespace ZachLib.Logging
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
             // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
+            GC.SuppressFinalize(this);
         }
         #endregion
     }

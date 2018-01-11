@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Match = System.Text.RegularExpressions.Match;
 
-namespace PPLib
+namespace ZachLib
 {
     public static class HttpExtensions
     {

@@ -9,24 +9,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Jil;
+using Newtonsoft.Json;
 
 namespace ZachLib.Logging
 {
-    public enum EntryType
-    {
-        UICHANGE,
-        STATUS,
-        DEBUG,
-        NTWRK,
-        ERROR,
-        FILE,
-        DATA,
-        DICTIONARY,
-        HTTP
-    };
-
     public static class LogManager
     {
+        #region Setup
         static LogManager()
         {
             if (!Directory.Exists(LOGGER_PATH))
@@ -41,210 +30,445 @@ namespace ZachLib.Logging
                     JSON.Deserialize<IEnumerable<LogUpdate>>(File.ReadAllText(QUEUE_PATH)) :
                     Enumerable.Empty<LogUpdate>()
             );
+            "[{0}] [{1}]:\t{2} ~ {3}"
+            isRunning = false;
         }
 
+        private static void Initialize()
+        {
+            var values = logs.Values;
+            foreach (var value in values)
+            {
+                value.Initialize();
+            }
+        }
+
+        private static readonly object _queueLock = new object();
         private static ConcurrentQueue<LogUpdate> queue = null;
         private static SortedDictionary<string, Log> logs = new SortedDictionary<string, Log>();
-        private static Thread loggerThread = new Thread(() => ManageLogging());
+        private static Thread loggerThread = new Thread(() => ManageLogging()) {
+            Priority = ThreadPriority.BelowNormal,
+            IsBackground = true,
+            Name = "LoggerThread"
+        };
+        private static int FileEntriesNotLogged = 0;
 
-        public static string Format = null;
-        public static string TimeFormat = null;
+        public static string Format { get; private set; }
+        private static string TimeFormat = "[-][d’:’]h’:’mm’:’ss[.FFF]";
         private const string NEW_LINE = "\r\n\t\t\t\t\t";
+        private const string FILE_DIVISOR = "\r\n\r\n\t\t~~~\t\t\r\n\r\n";
         private static readonly string TODAY = DateTime.Now.ToString("MM.dd.yyyy") + ".txt";
 
         public static readonly string LOGGER_PATH = @"C:\Users\" + Environment.UserName + @"\AppData\Local\ZachLogs\";
         public static string CURSESSION_PATH = null;
         private static readonly string QUEUE_PATH = LOGGER_PATH + "Queue.txt";
+        public static bool isRunning { get; private set; }
 
         public static event EntryHandler OnEntry;
         public delegate void EntryHandler(object sender, string logName, string entry);
+#endregion
 
-        public static void AddLog(string path)
+        #region AddLog
+        /// <summary>
+        /// Adds the default Log (logs by date, entries by time) to the Dictionary.
+        /// </summary>
+        /// <param name="name">The name that the Log will be referenced by, as well as the name of the Folder the logs will reside in.</param>
+        public static void AddLog(string name)
         {
-            if (Directory.Exists(path))
+            AddLog(name, LogType.FolderFilesByDate);
+        }
+
+        /// <summary>
+        /// Adds a log of the specified type and name to the Dictionary, with the default entry-formatting behavior.
+        /// </summary>
+        /// <param name="type">How the log's entries will be interpreted and handled.</param>
+        public static void AddLog(string name, LogType type)
+        {
+            Log log = new Log(type, name);
+            log.Formatting = FormattingType.Global;
+            AddLog(log);
+        }
+
+        public static void AddLog(Log log)
+        {
+            bool wasRunning = isRunning;
+            if (isRunning)
+                Stop(true);
+
+            lock (_queueLock)
             {
-                //if (!Directory.Exists(path))
-                //   Directory.CreateDirectory(path);
-
-                Directory.GetFiles(path).ToList().FindAll(f => new FileInfo(f).Length == 0)
-                    .ForEach(f => File.Delete(f));
-
-                string key = Path.GetDirectoryName(path);
-                if (Directory.EnumerateFiles(path).Select(f => Path.GetFileName(f)).Any(f => Char.IsDigit(f[0]) && !f.Contains(' ')) && !logs.ContainsKey(key))
-                    logs.Add(key, new StreamWriter(path + TODAY));
-                else if (!logDirectories.ContainsKey(key))
-                    logDirectories.Add(key, path);
+                logs.Add(log.Name, log);
+                logs[log.Name].Initialize();
             }
-            else
+
+            if (wasRunning)
             {
-                string dirPath = Path.GetDirectoryName(path);
-                if (!Directory.Exists(dirPath))
-                    Directory.CreateDirectory(dirPath);
-                dirPath = null;
-
-                string key = Path.GetFileNameWithoutExtension(path);
-                if (!logs.ContainsKey(key))
-                    logs.Add(key, new StreamWriter(path));
+                Start();
+                Enqueue(
+                    "LogManager",
+                    EntryType.STATUS,
+                    new object[] {
+                        "Log Added",
+                        log.Name
+                    }
+                );
             }
         }
+#endregion
 
-        public void AddLogs(params string[] paths)
+        #region AddLogs
+        public static void AddLogs(params string[] names)
         {
-            foreach (string path in paths)
+            foreach (string name in names)
             {
-                AddLog(path);
+                AddLog(name);
             }
         }
 
-        public static void SetGlobalFormat(string entryFormat = "[{0}] [{1}]:\t{2} ~ {3}", string timeFormat = "[-][d’:’]h’:’mm’:’ss[.FFF]")
+        public static void AddLogs(params KeyValuePair<string, LogType>[] logs)
         {
-            
+            foreach(var log in logs)
+            {
+                AddLog(log.Key, log.Value);
+            }
         }
 
-        public static void Start(ThreadPriority priority = ThreadPriority.BelowNormal, bool isBackground = true)
+        public static void AddLogs(params Log[] logs)
         {
-            loggerThread.Priority = priority;
-            loggerThread.IsBackground = isBackground;
-            loggerThread.Start();
+            foreach(var log in logs)
+            {
+                AddLog(log);
+            }
         }
+        #endregion
+
+        #region SetGlobalFormat
+        public static void SetGlobalFormat(string entryFormat, string timeFormat)
+        {
+            Format = entryFormat;
+            TimeFormat = timeFormat;
+        }
+
+        public static void SetGlobalFormat(string entryFormat)
+        {
+            Format = entryFormat
+        }
+        #endregion
+
+        #region GetDefaultTimeFormat
+        public static string GetDefaultTimeFormat()
+        {
+            return DateTime.Now.ToString(TimeFormat);
+        }
+
+        public static string GetDefaultTimeFormat(DateTime dateTime)
+        {
+            return dateTime.ToString(TimeFormat);
+        }
+        #endregion
+
+        #region Enqueue
+        public static void Enqueue(LogUpdate update)
+        {
+            queue.Enqueue(update);
+        }
+
+        public static void Enqueue(string logName, EntryType type)
+        {
+            queue.Enqueue(new LogUpdate(logName, type));
+        }
+
+        public static void Enqueue(string log, string fileName, object data)
+        {
+            queue.Enqueue(new LogUpdate(log, fileName, data));
+        }
+
+        public static void Enqueue(string log, string fileName, object data, Exception error)
+        {
+            queue.Enqueue(new LogUpdate(log, fileName, data, error));
+        }
+
+        public static void Enqueue(string log, string fileName, bool withLogEntry, object data)
+        {
+            queue.Enqueue(new LogUpdate(log, fileName, withLogEntry, data));
+        }
+
+        public static void Enqueue(string log, string fileName, bool withLogEntry, object data, Exception error)
+        {
+            queue.Enqueue(new LogUpdate(log, fileName, withLogEntry, data, error));
+        }
+
+        public static void Enqueue(string log, EntryType entryType, string entry1, string entry2)
+        {
+            queue.Enqueue(new LogUpdate(log, entryType, entry1, entry2));
+        }
+
+        public static void Enqueue(string log, object[] logContent)
+        {
+            queue.Enqueue(new LogUpdate(log, logContent));
+        }
+
+        public static void Enqueue(string log, EntryType type, object[] logContent)
+        {
+            queue.Enqueue(new LogUpdate(log, type, logContent));
+        }
+
+        public static void Enqueue(string log, string fileName, object[] logcontent, object data)
+        {
+            queue.Enqueue(new LogUpdate(log, fileName, logcontent, data));
+        }
+
+        public static void Enqueue(string log, string fileName, object[] logcontent, object data, Exception error)
+        {
+            queue.Enqueue(new LogUpdate(log, fileName, logcontent, data, error));
+        }
+
+        public static void Enqueue(string log, string key, string value)
+        {
+            queue.Enqueue(new LogUpdate(log, key, value));
+        }
+        #endregion
+
+        #region Start
+        public static void Start()
+        {
+            if (!isRunning)
+            {
+                isRunning = true;
+                FileEntriesNotLogged = 0;
+                loggerThread.Start();
+
+                Enqueue(
+                    "LogManager",
+                    EntryType.STATUS,
+                    new object[]
+                    {
+                        "Starting...",
+                        "",
+                        "Thread Priority: \t" + loggerThread.Priority.ToString(),
+                        "Is Background: \t" + loggerThread.IsBackground.ToString(),
+                        "Number of Logs: \t" + logs.Count.ToString()
+                    }
+                );
+            }
+        }
+
+        public static void Start(ThreadPriority priority)
+        {
+            lock(_queueLock)
+            {
+                loggerThread.Priority = priority;
+            }
+            Start();
+        }
+
+        public static void Start(bool isBackground)
+        {
+            lock(_queueLock)
+            {
+                loggerThread.IsBackground = isBackground;
+            }
+            Start();
+        }
+
+        public static void Start(ThreadPriority priority, bool isBackground)
+        {
+            lock(_queueLock)
+            {
+                loggerThread.Priority = priority;
+                loggerThread.IsBackground = isBackground;
+            }
+            Start();
+        }
+#endregion
 
         public static void Stop(bool forceStop = false)
         {
-            if (!forceStop)
+            if (isRunning && !disposedValue)
             {
-                SpinWait.SpinUntil(() => this.IsEmpty);
+                if (!forceStop)
+                {
+                    Enqueue(
+                        "LogManager",
+                        EntryType.STATUS,
+                        new object[] {
+                            "Stopping...",
+                            "",
+                            FileEntriesNotLogged.ToString() + " file entries not logged.",
+                            queue.Count.ToString() + " items remaining in queue."
+                        }
+                    );
+                    SpinWait.SpinUntil(() => queue.IsEmpty);
+                }
+                
                 loggerThread.Abort();
+                loggerThread.Join(forceStop ? 250 : 2500);
+
+                lock (_queueLock)
+                {
+                    isRunning = false;
+                }
+            }
+        }
+        
+        public static bool LogExists(string name, out Log log)
+        {
+            return logs.TryGetValue(name, out log);
+        }
+
+        public static string FormatEntryUsingDefault(LogUpdate update)
+        {
+            Log log = logs[update.LogName];
+            if (update.Type == EntryType.PRESET)
+            {
+                switch (log.Type)
+                {
+                    case LogType.FolderFiles:
+                        update.Type = update.FileContent.Length > 1 ? 
+                            EntryType.ERROR : 
+                            EntryType.FILE;
+                        
+                        if (!log.LogFileEntries)
+                            update.FileContent.SaveAs(
+                                log.DataPath + update.File + ".txt",
+                                Formatting.Indented,
+                                FILE_DIVISOR
+                            );
+                        break;
+
+                    case LogType.FolderFilesNonLog:
+                        update.FileContent.SaveAs(
+                            log.DataPath + update.File + ".txt",
+                            FILE_DIVISOR
+                        );
+
+                        update.File = null;
+                        update.Type = EntryType.FILE;
+                        break;
+
+                    case LogType.SingleFileNonLog:
+                        return update.LogContent.Length > 1 ? 
+                            String.Join(" :=: ", update.LogContent) : 
+                            update.LogContent.First().ToString();
+
+                    case LogType.SingleFile:
+                        return String.Join(FILE_DIVISOR, update.LogContent);
+                }
+
+                if (log.LogFileEntries)
+                    return FormatEntryUsingDefault(update);
+                else
+                    return null;
             }
             else
             {
-                loggerThread.Abort();
-                while (!this.IsEmpty)
-                    this.TryDequeue(out _);
+                //LogType type = LogType.FolderFilesByDate;
+
+                if ((update.Type == EntryType.FILE || update.Type == EntryType.ERROR) && !String.IsNullOrWhiteSpace(update.File) && update.FileContent.Any())
+                    update.FileContent.SaveAs(
+                        log.DataPath + update.File + ".txt",
+                        Formatting.Indented,
+                        FILE_DIVISOR
+                    );
+
+                if (update.Type == EntryType.ERROR && update.FileContent.Any())
+                {
+                    Exception error = (Exception)update.FileContent.Last();
+
+                    return String.Format(
+                        Format,
+                        GetDefaultTimeFormat(update.Timestamp),
+                        "ERROR",
+                        error.Message,
+                        error.ToErrString(5)
+                    );
+                }
+                else
+                {
+                    bool hasFileName = !String.IsNullOrWhiteSpace(update.File);
+                    return String.Format(
+                        Format,
+                        GetDefaultTimeFormat(update.Timestamp),
+                        update.Type.ToString(),
+                        hasFileName ?
+                            update.File :
+                            update.LogContent.First(),
+                        String.Join(
+                            NEW_LINE, 
+                            hasFileName ? 
+                                update.LogContent :
+                                update.LogContent.Skip(1)
+                        )
+                    );
+                }
             }
-
         }
-
+        
         private static void ManageLogging()
         {
             LogUpdate update = new LogUpdate();
-            while (true)
+            try
             {
-                SpinWait.SpinUntil(() => !this.IsEmpty);
-
-                while (queue.TryDequeue(out update))
+                while (true)
                 {
-                    if (update.Type == EntryType.DICTIONARY)
-                        logs[update.LogName].WriteLineAsync(update.LogContent.Single().ToString());
-                    else
+                    SpinWait.SpinUntil(() => !queue.IsEmpty);
+
+                    lock (_queueLock)
                     {
-                        string time = update.Timestamp.ToString(timeFormat);
-
-                        if (update.Type == EntryType.HTTP)
+                        while (queue.TryDequeue(out update))
                         {
-                            string entry = String.Format(
-                                format,
-                                time,
-                                "HTTP",
-                                update.LogContent[0],
-                                String.Join(
-                                    NEW_LINE,
-                                    update.LogContent.Skip(1)
-                                )
-                            );
-
-                            OnEntry(this, update.LogName, entry);
-                            logs[update.LogName].WriteLineAsync(entry);
-                            entry = null;
-                        }
-                        else
-                        {
-                            if (update.FileContent.Length > 0)
+                            if (logs.TryGetValue(update.LogName, out Log log))
                             {
-                                string filename = logDirectories[update.LogName] + update.LogContent.First().ToString() + ".txt";
-                                File.WriteAllText(
-                                    filename,
-                                    String.Join(
-                                        NEW_LINE,
-                                        update.FileContent.Select(
-                                            o => JSON.Serialize(o)
-                                        )
-                                    )
-                                );
-
-                                if (update.Type != EntryType.DATA)
-                                {
-                                    string entry = String.Format(
-                                        format,
-                                        time,
-                                        update.Type.ToString(),
-                                        update.File,
-                                        Path.GetDirectoryName(filename) + filename
-                                    );
-                                    OnEntry(this, update.LogName, entry);
-                                    logs[update.LogName].WriteLineAsync(entry);
-                                    entry = null;
-                                }
+                                if (!log.TryLogEntry(log[update]))
+                                    ++FileEntriesNotLogged;
                             }
-
-                            if (update.LogContent.Length > 0)
-                            {
-                                string entry = String.Format(
-                                    format,
-                                    time,
-                                    update.Type.ToString(),
-                                    update.File,
-                                    String.Join(
-                                        NEW_LINE,
-                                        update.LogContent
-                                    )
-                                );
-                                OnEntry(this, update.LogName, entry);
-                                logs[update.LogName].WriteLineAsync(entry);
-                            }
+                            else
+                                Enqueue("LogManager", EntryType.ERROR, new object[] { update.LogName, "Could not find a log of this name." });
                         }
                     }
                 }
             }
-        }
-
-        private void CurrentDomain_ProcessExit(object sender, EventArgs e)
-        {
-            this.Dispose(false);
+            catch (Exception e)
+            {
+                Enqueue("LogManager", update.LogName + " " + TODAY, update, e);
+                isRunning = false;
+                Stop();
+            }
         }
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
+        private static void CurrentDomain_ProcessExit(object sender, EventArgs e)
+        {
+            Dispose(false);
+        }
+        
+        private static bool disposedValue = false; // To detect redundant calls
 
-        protected virtual void Dispose(bool disposing)
+        private static void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
-                string[] keys = this.logs.Keys.ToArray();
-                foreach (var key in keys)
+                Stop(!disposing);
+                lock (queue)
                 {
-                    logs[key].Flush();
-                    logs[key].Dispose();
-                    logs[key].Close();
-                    logs[key] = null;
-                }
-                this.logs = null;
-                this.ToArray().SaveAs(LOGGER_PATH + "Queue.txt");
+                    queue.ToArray().SaveAs(LOGGER_PATH + "Queue.txt");
 
-                if (this.loggerThread != null)
-                {
-                    this.loggerThread.Abort();
-                    this.loggerThread.Join(250);
-                    this.loggerThread = null;
-                }
+                    var values = logs.Values.ToArray();
+                    foreach (var value in values)
+                    {
+                        value.Dispose();
+                    }
+                    logs.Clear();
+                    logs = null;
 
-
-                if (disposing)
-                {
-                    while (!this.IsEmpty)
-                        this.TryDequeue(out _);
-                    this.format = null;
-                    this.logDirectories = null;
-                    this.timeFormat = null;
+                    if (disposing)
+                    {
+                        while (!queue.IsEmpty)
+                            queue.TryDequeue(out _);
+                        queue = null;
+                        Format = null;
+                        TimeFormat = null;
+                    }
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
@@ -261,7 +485,7 @@ namespace ZachLib.Logging
         // }
 
         // This code added to correctly implement the disposable pattern.
-        public void Dispose()
+        public static void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
@@ -270,130 +494,4 @@ namespace ZachLib.Logging
         }
         #endregion
     }
-
-    public struct LogUpdate
-    {
-        public string LogName { get; set; }
-        public object[] FileContent { get; set; }
-        public object[] LogContent { get; set; }
-        public EntryType Type { get; set; }
-        public string File { get; set; }
-        public DateTime Timestamp { get; set; }
-
-        public LogUpdate(string log, object[] data)
-        {
-            this.LogName = log;
-            this.FileContent = new object[] { data };
-            this.LogContent = null;
-            this.File = null;
-            this.Timestamp = DateTime.Now;
-            this.Type = EntryType.DATA;
-        }
-
-        public LogUpdate(string log, EntryType type, params object[] logcontent)
-        {
-            this.LogName = log;
-            this.FileContent = null;
-            this.LogContent = logcontent;
-            this.File = null;
-            this.Timestamp = DateTime.Now;
-            this.Type = type;
-        }
-
-        public LogUpdate(string log, string file, EntryType type, object[] logcontent, params object[] filecontent)
-        {
-            this.LogName = log;
-            this.FileContent = filecontent;
-            this.LogContent = logcontent;
-            this.File = file;
-            this.Timestamp = DateTime.Now;
-            this.Type = type;
-        }
-
-        public LogUpdate(string log, string entry)
-        {
-            this.LogName = log;
-            this.FileContent = null;
-            this.LogContent = new object[] { entry };
-            this.File = null;
-            this.Timestamp = DateTime.Now;
-            this.Type = EntryType.DICTIONARY;
-        }
-
-        /*public LogUpdate(string log, string httpCode, params object[] logcontent)
-        {
-            this.LogName = log;
-            this.FileContent = null;
-            this.LogContent = logcontent;
-            this.File = httpCode;
-            this.Timestamp = DateTime.Now;
-            this.Type = EntryType.HTTP;
-        }*/
-
-        /*public LogUpdate(string log, Exception error, string file = "Unknown", params object[] logcontent)
-        {
-            this.LogName = log;
-            this.FileContent = null;
-            this.LogContent = logcontent.Concat();
-            this.File = file;
-            this.Timestamp = DateTime.Now;
-            this.Type = EntryType.ERROR;
-        }*/
-    }
-
-    /*public struct LogUpdate
-    {
-        private const string FILENAME_DATE_FORMAT = "MM.dd.yyyy";
-        public string LogName { get; set; }             // Name of the log file and/or directory of log files to write to
-        public string Name { get; set; }
-        public EntryType Type { get; set; }
-        public string Filename { get; set; }            // Name of the file involved, and/or the name of the unique log file of full data 
-        public DateTime Timestamp { get; set; }         // Date and time that the update occured
-        public string Source { get; set; }
-        public object[] Content { get; set; }
-        private const string NEW_LINE = "\r\n\t\t\t\t\t";
-
-        public LogUpdate(string log, string filename, EntryType type, string src, params object[] content)
-        {
-            this.LogName = log;
-            this.Filename = filename;
-            this.Type = type;
-            this.Source = src;
-            this.Content = content;
-            this.Name = null;
-            this.Timestamp = DateTime.Now;
-        }
-
-        public LogUpdate(string log, string name, string src = null, params object[] content)
-        {
-            this.LogName = log;
-            this.Name = name;
-            this.Type = EntryType.DATA;
-            this.Timestamp = DateTime.Now;
-            this.Filename = (String.IsNullOrWhiteSpace(src) ? this.Timestamp.ToString(FILENAME_DATE_FORMAT) : src) + ".txt";
-            this.Source = null;
-            this.Content = content;
-        }
-
-        public void SerializeTo(string path)
-        {
-            File.WriteAllText(
-                path,
-                String.Join(
-                    "\r\n\r\n",
-                    this.Content.Select(o => JSON.Serialize(o))
-                )
-            );
-        }
-
-        public string Format(string format, string timeFormat)
-        {
-            return String.Format(
-                format,
-                this.Timestamp.ToString(timeFormat),
-                this.Type.ToString(),
-                String.Join(NEW_LINE, this.Content)
-            );
-        }
-    }*/
 }

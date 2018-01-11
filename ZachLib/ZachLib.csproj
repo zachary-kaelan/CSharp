@@ -79,6 +79,7 @@
     <Compile Include="GUIExtensions.cs" />
     <Compile Include="HtmlUtils.cs" />
     <Compile Include="IOExtensions.cs" />
+    <Compile Include="HttpExtensions.cs" />
     <Compile Include="Logging\Log.cs" />
     <Compile Include="Logging\LogFormatting.cs" />
     <Compile Include="Logging\LogManager.cs" />

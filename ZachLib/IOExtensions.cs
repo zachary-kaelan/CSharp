@@ -42,7 +42,34 @@ namespace ZachLib
             if (obj != null)
                 File.WriteAllText(path, JsonConvert.SerializeObject(obj, format));
         }
-#endregion
+
+        private const string FILE_DIVISOR = "\r\n\r\n\t\t~~~\t\t\r\n\r\n";
+        public static void SaveAs<T>(this IEnumerable<T> objects, string path, string fileDivisor = FILE_DIVISOR)
+        {
+            File.WriteAllText(
+                path,
+                String.Join(
+                    fileDivisor,
+                    objects.Where(o => o != null).Select(
+                        o => JSON.Serialize(o)
+                    )
+                )
+            );
+        }
+
+        public static void SaveAs<T>(this IEnumerable<T> objects, string path, Formatting formatting, string fileDivisor = FILE_DIVISOR)
+        {
+            File.WriteAllText(
+                path,
+                String.Join(
+                    fileDivisor,
+                    objects.Where(o => o != null).Select(
+                        o => JsonConvert.SerializeObject(o, formatting)
+                    )
+                )
+            );
+        }
+        #endregion
 
         public static void SaveDictAs(this IEnumerable<KeyValuePair<string, string>> dict, string path, string separator = " :=: ")
         {

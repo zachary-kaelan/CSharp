@@ -12,7 +12,20 @@ namespace UndeadRaces
     {
         public static readonly ThingDef CorpseFilth = new ThingDef()
         {
-            
+            defName = "FilthCorpseDebris",
+            label = "corpse debris",
+            statBases = new List<StatModifier>() {
+                new StatModifier()
+                {
+                    stat = StatDef.Named("Beauty"),
+                    value = -25f
+                },
+                new StatModifier()
+                {
+                    stat = StatDef.Named("Cleanliness"),
+                    value = -15f
+                }
+            },
             filth = new FilthProperties()
             {
                 canFilthAttach = true,
