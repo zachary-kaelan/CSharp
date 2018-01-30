@@ -44,7 +44,7 @@ namespace ZachLib
         }
 
         private const string FILE_DIVISOR = "\r\n\r\n\t\t~~~\t\t\r\n\r\n";
-        public static void SaveAs<T>(this IEnumerable<T> objects, string path, string fileDivisor = FILE_DIVISOR)
+        public static void SaveDividedAs<T>(this IEnumerable<T> objects, string path, string fileDivisor = FILE_DIVISOR)
         {
             File.WriteAllText(
                 path,
@@ -57,7 +57,7 @@ namespace ZachLib
             );
         }
 
-        public static void SaveAs<T>(this IEnumerable<T> objects, string path, Formatting formatting, string fileDivisor = FILE_DIVISOR)
+        public static void SaveDividedAs<T>(this IEnumerable<T> objects, string path, Formatting formatting, string fileDivisor = FILE_DIVISOR)
         {
             File.WriteAllText(
                 path,

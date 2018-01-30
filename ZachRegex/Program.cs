@@ -25,6 +25,7 @@ namespace ZachRegex
                     new RegexCompilationInfo("^\"?(.+) :=: ([^\"]+)", RegexOptions.Multiline, "FileDictionary", "RGX.UTILS", true, ts250),
                     new RegexCompilationInfo(@"\[\[([^\]]+)\]\]", RegexOptions.None, "SecondaryFormatting", "RGX.UTILS", true, ts50),
                     new RegexCompilationInfo(@"[^A-Za-z0-9_]", RegexOptions.None, "Symbols", "RGX.UTILS", true, ts25),
+                    new RegexCompilationInfo(@"[~#%&*{}\:<>?/+|" + "\"" + @"]|(?:^[._]*)|(?:\.$)|(?:\.{2,})", RegexOptions.None, "MakeFilenameFriendly", "RGX.UTILS", true, ts25),
 
                     //--------------------------------//
                     //------------- HTML -------------//

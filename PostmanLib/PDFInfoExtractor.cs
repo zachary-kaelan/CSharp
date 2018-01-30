@@ -18,6 +18,7 @@ using RGX.PDF.SA;
 // PestPac New
 using PPRGX.FilenameAdvanced;
 using PPRGX.SA;
+using ZachLib;
 
 namespace PostmanLib
 {
@@ -52,7 +53,7 @@ namespace PostmanLib
             {Schedule.MOSQUITOS, new string[4] {"Jun", "Jul", "Aug", "Sep"} }
         };
 
-        public Customer ExtractPDF(ref string path)
+        public static Customer ExtractPDF(ref string path)
         {
             string name = System.IO.Path.GetFileNameWithoutExtension(path);
             Customer customer = new Customer();
@@ -124,8 +125,10 @@ namespace PostmanLib
                 reader.Close();
                 reader = null;
 
-                if ()
+                
             }
+
+            return new Customer();
         }
     }
 }

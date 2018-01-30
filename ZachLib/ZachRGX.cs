@@ -16,6 +16,7 @@ namespace ZachLib
         public static readonly FileDigit FILE_DIGIT = new FileDigit();
         public static readonly SecondaryFormatting SECONDARY_FORMATTING = new SecondaryFormatting();
         public static readonly Symbols SYMBOLS = new Symbols();
+        public static readonly MakeFilenameFriendly FILENAME_DISALLOWED_CHARACTERS = new MakeFilenameFriendly();
 
         public static readonly Links HTML_LINKS = new Links();
         public static readonly Paragraphs HTML_PARAGRAPHS = new Paragraphs();

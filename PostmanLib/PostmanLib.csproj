@@ -48,8 +48,8 @@
     <Reference Include="RegexLib">
       <HintPath>..\..\..\..\Source\Repos\PestPacCompilation\PestPacCompilation\bin\Debug\RegexLib.dll</HintPath>
     </Reference>
-    <Reference Include="RestSharp, Version=106.2.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
-      <HintPath>..\packages\RestSharp.106.2.0\lib\net452\RestSharp.dll</HintPath>
+    <Reference Include="RestSharp, Version=106.2.1.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
+      <HintPath>..\packages\RestSharp.106.2.1\lib\net452\RestSharp.dll</HintPath>
     </Reference>
     <Reference Include="Sigil, Version=4.7.0.0, Culture=neutral, PublicKeyToken=2d06c3494341c8ab, processorArchitecture=MSIL">
       <HintPath>..\packages\Sigil.4.7.0\lib\net45\Sigil.dll</HintPath>
@@ -69,6 +69,9 @@
     <Reference Include="System.Xml" />
     <Reference Include="ZachLib">
       <HintPath>..\ZachLib\bin\Debug\ZachLib.dll</HintPath>
+    </Reference>
+    <Reference Include="ZachRGX">
+      <HintPath>..\ZachRegex\bin\Debug\ZachRGX.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

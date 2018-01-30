@@ -59,6 +59,14 @@ namespace PPRegex
                         true, ts50
                     ),
 
+                    // ~~~~~ PESTPAC INTERNAL ~~~~~
+                    new RegexCompilationInfo(
+                        "^\t{8}<td>\n\t{8}<input (?:[^ ]+ ){2}value=\"(?<SessionUserID>[^\"]+)\">\n\t{8}<input (?:[^ ]+ ){2}value=\"(?<SessionID>[^\"]+)\">(?:\n[^\n]+){2}\n\t{8}<td>(?<Name>[^<]+)(?:<[^<]+){3}<td>(?<LastActivity>[^<]+)<" + @"\/td>[^>]+>(?<NumLicenses>\d*)",
+                        RegexOptions.Multiline,
+                        "LicenseUsers",
+                        "PPRGX.PPI",
+                        true, ts50
+                    )
                 }, new AssemblyName("PPRGX, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null")
             );
         }

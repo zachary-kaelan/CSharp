@@ -2,17 +2,21 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Runtime;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-using PPLib;
+using ZachLib;
 using RedditSharp;
 using RedditSharp.Extensions;
 using RedditSharp.Multi;
 using RedditSharp.Things;
+using RedditLib;
+using FourChanLib;
 
 namespace OptimalPostingTimes
 {
@@ -60,18 +64,39 @@ namespace OptimalPostingTimes
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            FinalRatings<RedditThingRating> RedditRatings = new FinalRatings<RedditThingRating>();
+            
+
+            //var boards = FourChan.GetBoards();
+
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
+            GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
             BotWebAgent webAgent = new BotWebAgent("ZephandrypusBot", "meeko011", "HXlqOyR76U3u-A", "4AD5uZkMwAXkOn6FS-_CJM26h5U", "https://www.reddit.com/u/ZephandrypusBot");
             Reddit reddit = new Reddit(webAgent, false);
-            Subreddit all = reddit.RSlashAll;
+            timer.Stop();
+            long setupTime = timer.ElapsedMilliseconds;
 
-            var posts = all.Posts.Select(p => new RedditThing(p)).ToArray();
-            posts.SaveAs(REDDIT_PATH + "AllPosts.txt");
+            timer.Restart();
+            /*FinalRatings dbdRatings = new FinalRatings(
+                reddit.GetSubreddit(
+                    "deadbydaylight"
+                ).Posts.Select(
+                    p => new RedditThing(p, true)
+                )
+            );
+            timer.Stop();
+            long processTime = timer.ElapsedMilliseconds;
+            dbdRatings.SaveAs(REDDIT_PATH + "DBDRatings.txt");
+
+            FinalRatings RedditRatings = new FinalRatings(all.Posts.Select(p => new RedditThing(p)));*/
+            //posts.SaveAs(REDDIT_PATH + "AllPosts.txt");
+
+            Subreddit all = reddit.RSlashAll;
             all = null;
             reddit = null;
             webAgent = null;
 
-            RedditRatings.ActualByHour = new SortedDictionary<int, int>(
+            /*RedditRatings.ActualByHour = new SortedDictionary<int, int>(
                 posts.GroupBy(
                     p => Math.Round(p.Time.TotalHours),
                     (k, values) => new KeyValuePair<int, int>(Convert.ToInt32(k), values.Count())
@@ -124,7 +149,7 @@ namespace OptimalPostingTimes
                     g.Sum(d => d.Score)
                 )
             ).NormalizeRatings();
-            RedditRatings.Hours.SaveAs(REDDIT_PATH + "Hours.txt");
+            RedditRatings.Hours.SaveAs(REDDIT_PATH + "Hours.txt");*/
 
 
         }

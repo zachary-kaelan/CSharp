@@ -330,7 +330,7 @@ namespace ZachLib.Logging
                             EntryType.FILE;
                         
                         if (!log.LogFileEntries)
-                            update.FileContent.SaveAs(
+                            update.FileContent.SaveDividedAs(
                                 log.DataPath + update.File + ".txt",
                                 Formatting.Indented,
                                 FILE_DIVISOR
@@ -338,7 +338,7 @@ namespace ZachLib.Logging
                         break;
 
                     case LogType.FolderFilesNonLog:
-                        update.FileContent.SaveAs(
+                        update.FileContent.SaveDividedAs(
                             log.DataPath + update.File + ".txt",
                             FILE_DIVISOR
                         );
@@ -366,7 +366,7 @@ namespace ZachLib.Logging
                 //LogType type = LogType.FolderFilesByDate;
 
                 if ((update.Type == EntryType.FILE || update.Type == EntryType.ERROR) && !String.IsNullOrWhiteSpace(update.File) && update.FileContent.Any())
-                    update.FileContent.SaveAs(
+                    update.FileContent.SaveDividedAs(
                         log.DataPath + update.File + ".txt",
                         Formatting.Indented,
                         FILE_DIVISOR

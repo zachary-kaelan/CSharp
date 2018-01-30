@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +16,8 @@ using PestPac.Model;
 using PostmanLib.Properties;
 using PPLib;
 using RestSharp;
-//using ZachLib;
+using ZachLib;
+using ZachLib.HTTP;
 using ZachLib.Logging;
 
 namespace PostmanLib
@@ -33,8 +35,8 @@ namespace PostmanLib
         public static event ExecutionHandler OnExecute;
         private const string REFRESH_TOKEN = "2b77ff1d-1da4-35a8-9338-538dbaef50ca";
 
-        private static readonly RestClient client = new RestClient("https://api.workwave.com/pestpac/v1/");
-        private static readonly RestClient tokenClient = new RestClient("https://is.workwave.com/oauth2/token?scope=openid");
+        private static RestClient client { get; set; }
+        private static RestClient tokenClient { get; set; }
 
         static Postman()
         {
@@ -45,10 +47,12 @@ namespace PostmanLib
 
             OnExecute += Postman_OnExecute;
 
+            tokenClient = new RestClient("https://is.workwave.com/oauth2/token?scope=openid");
             tokenClient.AddDefaultHeader("authorization", "Bearer N2JWMU9wRjFmT1FDSVRNam1fWmpsNjJkcFFZYTpjdXJueTNXb3g0ZUdpREdKTWhWdUI3OVhSSVlh");
             tokenClient.AddDefaultParameter("grant_type", "refresh_token");
             tokenClient.AddDefaultParameter("refresh_token", REFRESH_TOKEN);
 
+            client = new RestClient("https://api.workwave.com/pestpac/v1/");
             client.AddDefaultHeader("apikey", "Ac1jfgugSAmy6mpj1AGnYzrAdV9HfLPc");
             client.AddDefaultHeader("tenant-id", "323480");
             client.AddDefaultHeader("Authorization", "");
@@ -56,8 +60,13 @@ namespace PostmanLib
             WaitForInternet();
             DateTime now = DateTime.Now;
 
-            if (DateTime.Compare(Settings.Default.expires_in, now) <= 0 || String.IsNullOrWhiteSpace(Settings.Default.access_token))
+            if (String.IsNullOrWhiteSpace(Settings.Default.access_token) || DateTime.Compare(Settings.Default.expires_in, now) <= 0)
                 GetToken(now);
+            else
+            {
+                client.RemoveDefaultParameter("Authorization");
+                client.AddDefaultHeader("Authorization", "Bearer " + Settings.Default.access_token);
+            }
         }
 
         private static void Postman_OnExecute(object sender, ExecutionEventArgs e)
@@ -66,11 +75,11 @@ namespace PostmanLib
             {
                 if (e.ResponseCode == HttpStatusCode.NotImplemented)
                 {
-                    RestRequest request = (RestRequest)sender;
                     LogManager.Enqueue(
                         "Postman",
-                        
-
+                        ZachRGX.FILENAME_DISALLOWED_CHARACTERS.Replace(e.Message, ""),
+                        ((RestRequest)sender).Simplify(),
+                        (Exception)e.Data
                     );
                 }
                 LogManager.Enqueue(
@@ -288,8 +297,8 @@ namespace PostmanLib
             {
                 docs = docs.Where(
                     d => d.DocumentType == DocumentListModel.DocumentTypeEnum.Locationdocument &&
-                        compInf.IsPrefix(d.Name, name, options) ||
-                        compInf.IsSuffix(d.Name, name, options) ||
+                        Utils.COMPARE_INFO.IsPrefix(d.Name, name, Utils.IGNORE_CASE_AND_SYMBOLS) ||
+                        Utils.COMPARE_INFO.IsSuffix(d.Name, name, Utils.IGNORE_CASE_AND_SYMBOLS) ||
                         d.Name.Contains(" " + name + " ")
                 );
                 return docs.Any();
@@ -298,7 +307,12 @@ namespace PostmanLib
             return false;    
         }
 
-        public static bool GetDocuments(string locID, DateTime startingDate, string name = null, out IEnumerable<DocumentListModel> docs)
+        public static bool GetDocuments(string locID, DateTime startingDate, out IEnumerable<DocumentListModel> docs)
+        {
+            return GetDocuments(locID, startingDate, null, out docs);
+        }
+
+        public static bool GetDocuments(string locID, DateTime startingDate, string name, out IEnumerable<DocumentListModel> docs)
         {
             if (String.IsNullOrWhiteSpace(name) ? GetDocuments(locID, out docs) : GetDocuments(locID, name, out docs))
             {
@@ -315,12 +329,17 @@ namespace PostmanLib
         #endregion
 
         #region DocExists
-        public static bool DocExists(string locID, DateTime comparisonDate, string name = null, out IEnumerable<DocumentListModel> duplicates)
+        public static bool DocExists(string locID, DateTime comparisonDate, out IEnumerable<DocumentListModel> duplicates)
+        {
+            return DocExists(locID, comparisonDate, null, out duplicates);
+        }
+
+        public static bool DocExists(string locID, DateTime comparisonDate, string name, out IEnumerable<DocumentListModel> duplicates)
         {
             if (GetDocuments(locID, comparisonDate, name, out duplicates))
             {
                 duplicates = duplicates.Where(
-                    d => !compInf.IsPrefix(d.FileName, "temp", options)
+                    d => !Utils.COMPARE_INFO.IsPrefix(d.FileName, "temp", Utils.IGNORE_CASE_AND_SYMBOLS)
                 );
 
                 return duplicates.Any();
@@ -329,7 +348,12 @@ namespace PostmanLib
             return false;
         }
 
-        public static bool DocExists(string locID, string name = null, out IEnumerable<DocumentListModel> duplicates)
+        public static bool DocExists(string locID, out IEnumerable<DocumentListModel> duplicates)
+        {
+            return DocExists(locID, null, out duplicates);
+        }
+
+        public static bool DocExists(string locID, string name, out IEnumerable<DocumentListModel> duplicates)
         {
             return DocExists(locID, DateTime.Now, name, out duplicates);
         }
@@ -417,9 +441,32 @@ namespace PostmanLib
             request = null;
             return check;
         }
+        #endregion
+
+        #region GetTaxCodes
+        public static bool GetTaxCodes(out IEnumerable<TaxCode> taxcodes)
+        {
+            return GetTaxCodes(false, out taxcodes);
+        }
+
+        public static bool GetTaxCodes(bool active, out IEnumerable<TaxCode> taxcodes)
+        {
+            return TryExecute<IEnumerable<TaxCode>>(
+                new RestRequest("lookups/TaxCodes", Method.GET).AddOrUpdateParameter("active", active, ParameterType.GetOrPost),
+                out taxcodes
+            ).IsOK();
+        }
 #endregion
 
-
+        public static bool Patch(string locID, params PatchOperation[] ops)
+        {
+            return TryExecute(
+                new RestRequest(
+                    "locations/" + locID,
+                    Method.PATCH
+                ).AddJsonBody(ops)
+            ).IsOK();
+        }
     }
 
     public class ExecutionEventArgs : EventArgs

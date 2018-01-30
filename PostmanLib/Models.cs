@@ -9,6 +9,7 @@ using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 using PPLib;
 using RGX.Utils;
+using ZachLib;
 
 namespace PostmanLib
 {
@@ -178,7 +179,7 @@ namespace PostmanLib
         public string Schedule { get; set; }
         public double Total { get; set; }
         public string Email { get; set; }
-        public string Phone { get => Phone; set => PPRGX.PHONE.Replace(value, "$1-$2-$3"); }
+        public string Phone { get => Phone; set => ZachRGX.PHONE.Replace(value, "$1-$2-$3"); }
 
         public SA2Info(Dictionary<string, string> dict) : this()
         {
@@ -233,6 +234,29 @@ namespace PostmanLib
                 Subtotal.ToString(),
                 TaxRate.ToString()
             );
+        }
+    }
+
+    public struct TaxCode
+    {
+        public int TaxCodeID { get; set; }
+        public bool Active { get; set; }
+        public string Code { get; set; }
+        public string Description { get; set; }
+        public double TaxRate { get; set; }
+    }
+
+    public struct PatchOperation
+    {
+        public string op;
+        public string path;
+        public string value;
+
+        public PatchOperation(string operation, string fieldPath, string newValue)
+        {
+            op = operation;
+            path = fieldPath;
+            value = newValue;
         }
     }
 }

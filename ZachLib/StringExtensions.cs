@@ -17,6 +17,37 @@ namespace ZachLib
             }
             return str;
         }
+
+        private static readonly char[] VOWELS = new char[] { 'a', 'e', 'i', 'o', 'u', 'y' };
+        public static int CountSyllables(this string str)
+        {
+            string[] phonemes = str.Split(
+                VOWELS,
+                StringSplitOptions.RemoveEmptyEntries
+            );
+            int syllables = phonemes.Length - 1;
+
+            if (str.EndsWith("le"))
+                syllables += 1;
+            else if (str.EndsWith("ed") && phonemes[1].Length == 1)
+                syllables -= 1;
+
+            phonemes = null;
+            return syllables;
+        }
+
+        public static string TitleCapitalization(this string str)
+        {
+            return String.Join(
+                " ", str.Split(' ').Select(
+                    s => new string(
+                        s.ToUpper().Take(1).Concat(
+                            s.ToLower().Skip(1)
+                        ).ToArray()
+                    )
+                )
+            );
+        }
     }
 
     public static class ExtensionToStrings
