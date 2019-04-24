@@ -13,13 +13,28 @@ namespace ZachLib
         #region ToDictionary(s)
         public static Dictionary<string, string> ToDictionary(this Regex rgx, string input)
         {
-            return rgx.Match(input).Groups.Cast<Group>().ToList()
-                .FindAll(g => g.Success).Zip(
-                    rgx.GetGroupNames(), (v, k) => new { k, v = v.Value }
-                ).Skip(1).ToDictionary(
-                    kv => kv.k,
-                    kv => kv.v
-                );
+            return rgx.Match(input).Groups.Cast<Group>().Zip(
+                rgx.GetGroupNames(), 
+                (v, k) => new { k, v = v.Value }
+            ).Skip(1).ToDictionary(
+                kv => kv.k,
+                kv => kv.v
+            );
+        }
+
+        public static Dictionary<string, string> ToDictionary(this Regex rgx, string input, string keyGroup, string valGroup)
+        {
+            return rgx.Matches(input).ToDictionary(keyGroup, valGroup);
+        }
+
+        public static Dictionary<string, string> ToDictionary(this MatchCollection matches, string keyGroup, string valGroup)
+        {
+            return matches.Cast<Match>().Select(
+                m => new KeyValuePair<string, string>(
+                    m.Groups[keyGroup].Value,
+                    m.Groups[valGroup].Value
+                )
+            ).Distinct(new KeyValuePairComparer<string, string>()).ToDictionary();
         }
 
         public static Dictionary<string, string> ToDictionary(this MatchCollection matches)
@@ -30,7 +45,10 @@ namespace ZachLib
         public static Dictionary<string, string> ToDictionary(this IEnumerable<Match> matches)
         {
             return matches.Select(
-                m => new KeyValuePair<string, string>(m.Groups["Key"].Value, m.Groups["Value"].Value)
+                m => new KeyValuePair<string, string>(
+                    m.Groups["Key"].Value, 
+                    m.Groups["Value"].Value
+                )
             ).Distinct(
                 new KeyValuePairComparer<string, string>()
             ).ToDictionary();
@@ -178,51 +196,201 @@ namespace ZachLib
         #region ToObject(s)
         public static T ToObject<T>(this Regex rgx, string input) where T : new()
         {
-            T obj = new T();
-            Type objType = obj.GetType();
+            Type type = typeof(T);
             string[] names = rgx.GetGroupNames();
-            var groups = rgx.Match(input).Groups;
-            string grpValue = null;
-            PropertyInfo prop = null;
-
-            foreach (string name in names)
+            
+            var propsTemp = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            if (propsTemp.All(p => !p.CanWrite))
             {
-                if (groups.TryGetGroup(name, out grpValue) && objType.TryGetProperty(name, out prop))
-                    prop.SetValue(obj, grpValue);
+                var values = rgx.Values(input);
+                //var types = type.GenericTypeArguments.Cast<object>().ToArray();
+
+                var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance).Select(
+                    c => new KeyValuePair<ConstructorInfo, ParameterInfo[]>(c, c.GetParameters()/*.Skip(types.Length).ToArray()*/)
+                ).Where(
+                    c => //c.Value.Length == 0 || 
+                         c.Value.Length >= names.Length
+                );
+
+                //constructors = constructors.Where(c => !c.Key.ContainsGenericParameters);
+                if (constructors.Count() == 1)
+                {
+                    var constructor = constructors.Single();
+                    return (T)constructor.Key.Invoke(
+                        values.Zip(
+                            constructor.Key.GetParameters(),
+                            (v, p) => v.HandleConversion(p.ParameterType)
+                        ).ToArray()
+                    );
+                }
+
+                /*if (type.ContainsGenericParameters)
+                {
+                    constructors = constructors.Where(
+                        c => c.Key.ContainsGenericParameters
+                    );
+
+                    if (constructors.Count() == 1)
+                    {
+                        var constructor = constructors.Single();
+                        if (constructor.Value.Length == 0)
+                            return (T)constructor.Key.Invoke(types);
+                        return (T)constructor.Key.Invoke(
+                            types.Concat(
+                                values.Zip(
+                                    constructor.Value,
+                                    (v, p) => v.HandleConversion(p.ParameterType)
+                                )
+                            ).ToArray()
+                        );
+                    }
+
+                    var temp = constructors.Where(c => c.Value.Length == names.Length);
+                    if (temp.Count() == 1)
+                    {
+                        var constructor = constructors.Single();
+                        return (T)constructor.Key.Invoke(
+                            types.Concat(
+                                values.Zip(
+                                    constructor.Value,
+                                    (v, p) => v.HandleConversion(p.ParameterType)
+                                )
+                            ).ToArray()
+                        );
+                    }
+                }
+                else
+                {
+                    
+                }*/
+            }
+            else
+            {
+                T obj = new T();
+                var groups = rgx.Match(input).Groups;
+                string grpValue = null;
+                PropertyInfo prop = null;
+                foreach (string name in names)
+                {
+                    if (groups.TryGetGroup(name, out grpValue) && type.TryGetProperty(name, out prop) && prop.CanWrite)
+                        prop.SetValue(obj, grpValue.HandleConversion(prop.PropertyType));
+                }
+
+                names = null;
+                groups = null;
+
+                return obj;
             }
 
-            names = null;
-            groups = null;
-
-            return obj;
+            return new T();
         }
 
         public static IEnumerable<T> ToObjects<T>(this Regex rgx, string input) where T : new()
         {
-            var matches = rgx.GroupCollections(input);
             string[] names = rgx.Keys();
             string grpValue = null;
             PropertyInfo prop = null;
+            Type type = typeof(T);
 
-            foreach (var match in matches)
+            var propsTemp = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            if (propsTemp.All(p => !p.CanWrite))
             {
-                T obj = new T();
-                Type objType = obj.GetType();
+                var values = rgx.ValuesMatrix(input);
+                //var types = type.GenericTypeArguments.Cast<object>().ToArray();
 
-                foreach (string name in names)
+                var constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance).Select(
+                    c => new KeyValuePair<ConstructorInfo, ParameterInfo[]>(c, c.GetParameters()/*.Skip(types.Length).ToArray()*/)
+                ).Where(
+                    c => //c.Value.Length == 0 || 
+                         c.Value.Length >= names.Length);
+
+                //constructors = constructors.Where(c => !c.Key.ContainsGenericParameters);
+                if (constructors.Count() == 1)
                 {
-                    if (match.TryGetGroup(name, out grpValue) && objType.TryGetProperty(name, out prop))
+                    var constructor = constructors.Single();
+                    foreach (var valueset in values)
                     {
-                        object boxed = obj;
-                        prop.SetValue(boxed, grpValue, null);
-                        obj = (T)boxed;
+                        yield return (T)constructor.Key.Invoke(
+                            valueset.Zip(
+                                constructor.Value,
+                                (v, p) => v.HandleConversion(p.ParameterType)
+                            ).ToArray()
+                        );
                     }
                 }
 
-                yield return obj;
-            }
+                /*if (type.ContainsGenericParameters)
+                {
+                    constructors = constructors.Where(
+                        c => c.Key.ContainsGenericParameters
+                    );
 
-            matches = null;
+                    if (constructors.Count() == 1)
+                    {
+                        var constructor = constructors.Single();
+                        if (constructor.Value.Length == 0)
+                            yield return (T)constructor.Key.Invoke(types);
+
+                        foreach(var valueSet in values)
+                        {
+                            yield return (T)constructor.Key.Invoke(
+                                types.Concat(
+                                    valueSet.Zip(
+                                        constructor.Value,
+                                        (v, p) => v.HandleConversion(p.ParameterType)
+                                    )
+                                ).ToArray()
+                            );
+                        }
+                    }
+
+                    var temp = constructors.Where(c => c.Value.Length == names.Length);
+                    if (temp.Count() == 1)
+                    {
+                        var constructor = constructors.Single();
+                        foreach(var valueset in values)
+                        {
+                            yield return (T)constructor.Key.Invoke(
+                                types.Concat(
+                                    values.Zip(
+                                        constructor.Value,
+                                        (v, p) => v.HandleConversion(p.ParameterType)
+                                    )
+                                ).ToArray()
+                            );
+                        }
+                    }
+                }
+                else
+                {
+                    
+                }*/
+            }
+            else
+            {
+                var matches = rgx.GroupCollections(input);
+
+                foreach (var match in matches)
+                {
+                    T obj = new T();
+                    Type objType = obj.GetType();
+
+                    foreach (string name in names)
+                    {
+                        if (match.TryGetGroup(name, out grpValue) && objType.TryGetProperty(name, out prop) && prop.CanWrite)
+                        {
+                            object boxed = obj;
+                            prop.SetValue(boxed, grpValue.HandleConversion(prop.PropertyType), null);
+                            obj = (T)boxed;
+                        }
+                    }
+
+                    yield return obj;
+                }
+
+                matches = null;
+            }
+            
             names = null;
 
             yield break;
@@ -233,13 +401,35 @@ namespace ZachLib
         public static IEnumerable<string> MatchesValues(this Regex rgx, string input)
         {
             if (rgx.GetGroupNames().Length > 1)
-                return rgx.GroupsMatrix(input).Select(m => m.ElementAt(1).Value);
+                return rgx.Matches(input).Cast<Match>().Select(m => m.Single());
             return rgx.Matches(input).Cast<Match>().Select(m => m.Value);
         }
 
         public static IEnumerable<string> MatchesValues(this Regex rgx, string input, string group)
         {
-            return rgx.Matches(input).Cast<Match>().Select(m => m.Groups[group].Value);
+            return rgx.Matches(input).Cast<Match>().Select(m => m.Single(group));
+        }
+        #endregion
+
+        #region Single
+        public static string Single(this Regex rgx, string input, int group = 1)
+        {
+            return rgx.Match(input).Groups[group].Value;
+        }
+
+        public static string Single(this Regex rgx, string input, string group)
+        {
+            return rgx.Match(input).Groups[group].Value;
+        }
+
+        public static string Single(this Match match, int group = 1)
+        {
+            return match.Groups[group].Value;
+        }
+
+        public static string Single(this Match match, string group)
+        {
+            return match.Groups[group].Value;
         }
         #endregion
 
@@ -271,5 +461,22 @@ namespace ZachLib
         {
             return rgx.GetGroupNames().Skip(1).ToArray();
         }
+
+        #region Values
+        public static IEnumerable<string> Values(this Regex rgx, string input)
+        {
+            return rgx.Match(input).Values();
+        }
+
+        public static IEnumerable<string> Values(this Match match)
+        {
+            return match.Groups.Cast<Group>().Skip(1).Select(g => g.Value);
+        }
+
+        public static IEnumerable<IEnumerable<string>> ValuesMatrix(this Regex rgx, string input)
+        {
+            return rgx.Matches(input).Cast<Match>().Select(m => m.Values());
+        }
+        #endregion
     }
 }

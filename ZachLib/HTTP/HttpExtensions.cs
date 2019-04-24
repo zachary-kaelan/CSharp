@@ -16,6 +16,12 @@ namespace ZachLib
         //public static readonly TimeSpan ts100 = TimeSpan.FromMilliseconds(100);
         //public static readonly TimeSpan ts250 = TimeSpan.FromMilliseconds(250);
 
+
+        public static bool IsOK(this HttpStatusCode code)
+        {
+            return (int)code < 400;
+        }
+
         public static IEnumerable<Match> GetMatches(this HttpWebRequest request, Regex rgx)
         {
             return rgx.Matches(request.GetResponseString()).Cast<Match>();

@@ -44,17 +44,26 @@
             this.lblPipsPrompt = new System.Windows.Forms.Label();
             this.numPips = new System.Windows.Forms.NumericUpDown();
             this.cboOfferings = new System.Windows.Forms.ComboBox();
-            this.label1 = new System.Windows.Forms.Label();
+            this.lblOfferingsPrompt = new System.Windows.Forms.Label();
             this.lstOfferings = new System.Windows.Forms.ListBox();
+            this.lblPerksPrompt = new System.Windows.Forms.Label();
+            this.panel1 = new System.Windows.Forms.Panel();
+            this.panel2 = new System.Windows.Forms.Panel();
+            this.cboPerks = new System.Windows.Forms.ComboBox();
+            this.lstPerks = new System.Windows.Forms.ListBox();
+            this.trackBar1 = new System.Windows.Forms.TrackBar();
             this.mnuLogMatch.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picPortrait)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numPips)).BeginInit();
+            this.panel1.SuspendLayout();
+            this.panel2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             this.SuspendLayout();
             // 
             // btnLogMatch
             // 
             this.btnLogMatch.Enabled = false;
-            this.btnLogMatch.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnLogMatch.Font = new System.Drawing.Font("Showcard Gothic", 9F);
             this.btnLogMatch.Location = new System.Drawing.Point(12, 27);
             this.btnLogMatch.Name = "btnLogMatch";
             this.btnLogMatch.Size = new System.Drawing.Size(243, 23);
@@ -64,7 +73,7 @@
             // 
             // btnViewHistory
             // 
-            this.btnViewHistory.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btnViewHistory.Font = new System.Drawing.Font("Showcard Gothic", 9F);
             this.btnViewHistory.Location = new System.Drawing.Point(261, 27);
             this.btnViewHistory.Name = "btnViewHistory";
             this.btnViewHistory.Size = new System.Drawing.Size(243, 23);
@@ -101,10 +110,10 @@
             // lblKillerPrompt
             // 
             this.lblKillerPrompt.AutoSize = true;
-            this.lblKillerPrompt.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblKillerPrompt.Font = new System.Drawing.Font("Showcard Gothic", 9F);
             this.lblKillerPrompt.Location = new System.Drawing.Point(185, 63);
             this.lblKillerPrompt.Name = "lblKillerPrompt";
-            this.lblKillerPrompt.Size = new System.Drawing.Size(47, 13);
+            this.lblKillerPrompt.Size = new System.Drawing.Size(60, 15);
             this.lblKillerPrompt.TabIndex = 4;
             this.lblKillerPrompt.Text = "Killer...";
             // 
@@ -120,10 +129,10 @@
             // lblSurvivorPrompt
             // 
             this.lblSurvivorPrompt.AutoSize = true;
-            this.lblSurvivorPrompt.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblSurvivorPrompt.Location = new System.Drawing.Point(443, 63);
+            this.lblSurvivorPrompt.Font = new System.Drawing.Font("Showcard Gothic", 9F);
+            this.lblSurvivorPrompt.Location = new System.Drawing.Point(430, 61);
             this.lblSurvivorPrompt.Name = "lblSurvivorPrompt";
-            this.lblSurvivorPrompt.Size = new System.Drawing.Size(61, 13);
+            this.lblSurvivorPrompt.Size = new System.Drawing.Size(75, 15);
             this.lblSurvivorPrompt.TabIndex = 6;
             this.lblSurvivorPrompt.Text = "Survivor?";
             // 
@@ -133,6 +142,7 @@
             this.cboKiller.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.cboKiller.FormattingEnabled = true;
             this.cboKiller.Items.AddRange(new object[] {
+            "",
             "Cannibal",
             "Doctor",
             "Hag",
@@ -156,6 +166,7 @@
             this.cboSurvivor.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.cboSurvivor.FormattingEnabled = true;
             this.cboSurvivor.Items.AddRange(new object[] {
+            "",
             "Ace",
             "Bill",
             "Claudette",
@@ -167,7 +178,7 @@
             "Meg",
             "Nea",
             "Quentin"});
-            this.cboSurvivor.Location = new System.Drawing.Point(387, 79);
+            this.cboSurvivor.Location = new System.Drawing.Point(390, 79);
             this.cboSurvivor.Name = "cboSurvivor";
             this.cboSurvivor.Size = new System.Drawing.Size(117, 21);
             this.cboSurvivor.Sorted = true;
@@ -186,7 +197,7 @@
             // 
             // txtBloodpoints
             // 
-            this.txtBloodpoints.Location = new System.Drawing.Point(282, 114);
+            this.txtBloodpoints.Location = new System.Drawing.Point(303, 114);
             this.txtBloodpoints.Name = "txtBloodpoints";
             this.txtBloodpoints.Size = new System.Drawing.Size(78, 20);
             this.txtBloodpoints.TabIndex = 10;
@@ -194,26 +205,26 @@
             // lblBloodpointsPrompt
             // 
             this.lblBloodpointsPrompt.AutoSize = true;
-            this.lblBloodpointsPrompt.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblBloodpointsPrompt.Font = new System.Drawing.Font("Showcard Gothic", 9F);
             this.lblBloodpointsPrompt.Location = new System.Drawing.Point(203, 117);
             this.lblBloodpointsPrompt.Name = "lblBloodpointsPrompt";
-            this.lblBloodpointsPrompt.Size = new System.Drawing.Size(73, 13);
+            this.lblBloodpointsPrompt.Size = new System.Drawing.Size(94, 15);
             this.lblBloodpointsPrompt.TabIndex = 11;
             this.lblBloodpointsPrompt.Text = "Bloodpoints";
             // 
             // lblPipsPrompt
             // 
             this.lblPipsPrompt.AutoSize = true;
-            this.lblPipsPrompt.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblPipsPrompt.Font = new System.Drawing.Font("Showcard Gothic", 9F);
             this.lblPipsPrompt.Location = new System.Drawing.Point(408, 117);
             this.lblPipsPrompt.Name = "lblPipsPrompt";
-            this.lblPipsPrompt.Size = new System.Drawing.Size(31, 13);
+            this.lblPipsPrompt.Size = new System.Drawing.Size(35, 15);
             this.lblPipsPrompt.TabIndex = 12;
             this.lblPipsPrompt.Text = "Pips";
             // 
             // numPips
             // 
-            this.numPips.Location = new System.Drawing.Point(441, 114);
+            this.numPips.Location = new System.Drawing.Point(449, 114);
             this.numPips.Maximum = new decimal(new int[] {
             2,
             0,
@@ -264,26 +275,26 @@
             "Start furthest from the Killer",
             "All Survivors Together",
             "All Survivors Separated "});
-            this.cboOfferings.Location = new System.Drawing.Point(328, 149);
+            this.cboOfferings.Location = new System.Drawing.Point(83, 3);
             this.cboOfferings.Name = "cboOfferings";
             this.cboOfferings.Size = new System.Drawing.Size(176, 21);
             this.cboOfferings.TabIndex = 14;
             this.cboOfferings.SelectedIndexChanged += new System.EventHandler(this.cboOfferings_SelectedIndexChanged);
             // 
-            // label1
+            // lblOfferingsPrompt
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(258, 152);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(58, 13);
-            this.label1.TabIndex = 15;
-            this.label1.Text = "Offerings";
+            this.lblOfferingsPrompt.AutoSize = true;
+            this.lblOfferingsPrompt.Font = new System.Drawing.Font("Showcard Gothic", 9F);
+            this.lblOfferingsPrompt.Location = new System.Drawing.Point(3, 3);
+            this.lblOfferingsPrompt.Name = "lblOfferingsPrompt";
+            this.lblOfferingsPrompt.Size = new System.Drawing.Size(74, 15);
+            this.lblOfferingsPrompt.TabIndex = 15;
+            this.lblOfferingsPrompt.Text = "Offerings";
             // 
             // lstOfferings
             // 
             this.lstOfferings.FormattingEnabled = true;
-            this.lstOfferings.Location = new System.Drawing.Point(328, 176);
+            this.lstOfferings.Location = new System.Drawing.Point(82, 30);
             this.lstOfferings.Name = "lstOfferings";
             this.lstOfferings.SelectionMode = System.Windows.Forms.SelectionMode.None;
             this.lstOfferings.Size = new System.Drawing.Size(176, 69);
@@ -291,14 +302,100 @@
             this.lstOfferings.SelectedIndexChanged += new System.EventHandler(this.lstOfferings_SelectedIndexChanged);
             this.lstOfferings.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.lstOfferings_MouseDoubleClick);
             // 
+            // lblPerksPrompt
+            // 
+            this.lblPerksPrompt.AutoSize = true;
+            this.lblPerksPrompt.Font = new System.Drawing.Font("Showcard Gothic", 9F);
+            this.lblPerksPrompt.Location = new System.Drawing.Point(3, 4);
+            this.lblPerksPrompt.Name = "lblPerksPrompt";
+            this.lblPerksPrompt.Size = new System.Drawing.Size(46, 15);
+            this.lblPerksPrompt.TabIndex = 17;
+            this.lblPerksPrompt.Text = "Perks";
+            // 
+            // panel1
+            // 
+            this.panel1.Controls.Add(this.lblOfferingsPrompt);
+            this.panel1.Controls.Add(this.cboOfferings);
+            this.panel1.Controls.Add(this.lstOfferings);
+            this.panel1.Location = new System.Drawing.Point(246, 150);
+            this.panel1.Name = "panel1";
+            this.panel1.Size = new System.Drawing.Size(261, 112);
+            this.panel1.TabIndex = 19;
+            // 
+            // panel2
+            // 
+            this.panel2.Controls.Add(this.cboPerks);
+            this.panel2.Controls.Add(this.lstPerks);
+            this.panel2.Controls.Add(this.lblPerksPrompt);
+            this.panel2.Location = new System.Drawing.Point(246, 268);
+            this.panel2.Name = "panel2";
+            this.panel2.Size = new System.Drawing.Size(261, 99);
+            this.panel2.TabIndex = 20;
+            // 
+            // cboPerks
+            // 
+            this.cboPerks.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.SuggestAppend;
+            this.cboPerks.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.cboPerks.FormattingEnabled = true;
+            this.cboPerks.Items.AddRange(new object[] {
+            "Slightly Increased Luck",
+            "Moderately Increased Luck",
+            "Considerably Increased Luck",
+            "Slightly Increased Luck for all Survivors",
+            "Moderately Increased Luck for all Survivors",
+            "Considerably Increased Luck for all Survivors",
+            "Slightly Lesser Mist",
+            "Slightly Thicker Mist",
+            "Moderately Thicker Mist",
+            "Considerably Thicker Mist",
+            "Darkest Moonlight",
+            "Dimmed Moonlight",
+            "Brighter Moonlight",
+            "Brightest Moonlight",
+            "2 Less Chests",
+            "1 Less Chest",
+            "1 More Chest",
+            "2 More Chests",
+            "1 Less Hook",
+            "1 More Hook",
+            "2 More Hooks",
+            "3 More Hooks",
+            "Cypress Memento Mori",
+            "Ivory Memento Mori",
+            "Ebony Memento Mori",
+            "Start with another Survivor",
+            "Start furthest from the Killer",
+            "All Survivors Together",
+            "All Survivors Separated "});
+            this.cboPerks.Location = new System.Drawing.Point(83, 3);
+            this.cboPerks.Name = "cboPerks";
+            this.cboPerks.Size = new System.Drawing.Size(176, 21);
+            this.cboPerks.TabIndex = 14;
+            // 
+            // lstPerks
+            // 
+            this.lstPerks.FormattingEnabled = true;
+            this.lstPerks.Location = new System.Drawing.Point(82, 30);
+            this.lstPerks.Name = "lstPerks";
+            this.lstPerks.SelectionMode = System.Windows.Forms.SelectionMode.None;
+            this.lstPerks.Size = new System.Drawing.Size(176, 56);
+            this.lstPerks.TabIndex = 16;
+            // 
+            // trackBar1
+            // 
+            this.trackBar1.Location = new System.Drawing.Point(73, 321);
+            this.trackBar1.Name = "trackBar1";
+            this.trackBar1.Size = new System.Drawing.Size(104, 45);
+            this.trackBar1.TabIndex = 21;
+            // 
             // frmLogMatch
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(516, 414);
-            this.Controls.Add(this.lstOfferings);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.cboOfferings);
+            this.Controls.Add(this.trackBar1);
+            this.Controls.Add(this.panel2);
+            this.Controls.Add(this.panel1);
             this.Controls.Add(this.numPips);
             this.Controls.Add(this.lblPipsPrompt);
             this.Controls.Add(this.lblBloodpointsPrompt);
@@ -320,6 +417,11 @@
             this.mnuLogMatch.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picPortrait)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numPips)).EndInit();
+            this.panel1.ResumeLayout(false);
+            this.panel1.PerformLayout();
+            this.panel2.ResumeLayout(false);
+            this.panel2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -343,8 +445,14 @@
         private System.Windows.Forms.Label lblPipsPrompt;
         private System.Windows.Forms.NumericUpDown numPips;
         private System.Windows.Forms.ComboBox cboOfferings;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label lblOfferingsPrompt;
         private System.Windows.Forms.ListBox lstOfferings;
+        private System.Windows.Forms.Label lblPerksPrompt;
+        private System.Windows.Forms.Panel panel1;
+        private System.Windows.Forms.Panel panel2;
+        private System.Windows.Forms.ComboBox cboPerks;
+        private System.Windows.Forms.ListBox lstPerks;
+        private System.Windows.Forms.TrackBar trackBar1;
     }
 }
 

@@ -11,13 +11,10 @@ using iTextSharp.text.pdf.parser;
 
 // PestPac Old
 using PPLib;
-using RGX.PDF;
-using RGX.PDF.INPC;
-using RGX.PDF.SA;
 
 // PestPac New
-using PPRGX.FilenameAdvanced;
-using PPRGX.SA;
+//using PPPPRGX.FilenameAdvanced;
+//using PPPPRGX.SA;
 using ZachLib;
 
 namespace PostmanLib
@@ -32,18 +29,18 @@ namespace PostmanLib
 
     public static class PDFInfoExtractor
     {
-        private static readonly Filename FILENAME_INFO = new Filename();
-        private static readonly RGX.PDF.INPC.Info INVOICE_INFO = new RGX.PDF.INPC.Info();
+        /*private static readonly Filename FILENAME_INFO = new Filename();
+        private static readonly PPRGX.PDF.INPC.Info INVOICE_INFO = new PPRGX.PDF.INPC.Info();
         private static readonly VTNumbers VANTAGE_NUMBERS = new VTNumbers();
-        private static readonly RGX.PDF.SA.Info SA_INFO = new RGX.PDF.SA.Info();
+        private static readonly PPRGX.PDF.SA.Info SA_INFO = new PPRGX.PDF.SA.Info();
         private static readonly NewInfo NEW_SA_INFO = new NewInfo();
         private static readonly Schedule SA_SCHEDULE = new Schedule();
-        private static readonly RGX.Utils.HasFilenameInfo HAS_FILENAME_INFO = new RGX.Utils.HasFilenameInfo();
+        private static readonly PPRGX.Utils.HasFilenameInfo HAS_FILENAME_INFO = new PPRGX.Utils.HasFilenameInfo();
 
         private static readonly FilenameInfoType FILENAME_INFO_TYPE = new FilenameInfoType();
         private static readonly INPC aINPC_FILENAME = new INPC();
         private static readonly SA aSA_FILENAME = new SA();
-        private static readonly SA2 aSA2_FILENAME = new SA2();
+        private static readonly SA2 aSA2_FILENAME = new SA2();*/
 
         private static readonly Dictionary<Schedule, string[]> schedules = new Dictionary<Schedule, string[]>()
         {
@@ -58,9 +55,9 @@ namespace PostmanLib
             string name = System.IO.Path.GetFileNameWithoutExtension(path);
             Customer customer = new Customer();
             
-            if (FILENAME_INFO_TYPE.IsMatch(name))
+            if (PPRGX.FILENAME_INFO_TYPE.IsMatch(name))
             {
-                Dictionary<string, string> type = FILENAME_INFO_TYPE.ToDictionary(name);
+                Dictionary<string, string> type = PPRGX.FILENAME_INFO_TYPE.ToDictionary(name);
                 customer.Advanced = type["Advanced"] == "a";
                 customer.Type = Enum.TryParse<PDFType>(type["Type"], true, out PDFType pdftype) ? pdftype : PDFType.Unknown;
 
@@ -69,15 +66,15 @@ namespace PostmanLib
                     switch(customer.Type)
                     {
                         case PDFType.INPC:
-                            customer.Load(aINPC_FILENAME.ToDictionary(name));
+                            customer.Load(PPRGX.FILENAME_INPC.ToDictionary(name));
                             break;
 
                         case PDFType.SA:
-                            customer.Load(aSA_FILENAME.ToDictionary(name));
+                            customer.Load(PPRGX.FILENAME_SA.ToDictionary(name));
                             break;
 
                         case PDFType.SA2:
-                            customer.Load(aSA2_FILENAME.ToDictionary(name));
+                            customer.Load(PPRGX.FILENAME_SA2.ToDictionary(name));
                             break;
 
                         default:
@@ -87,9 +84,9 @@ namespace PostmanLib
                             
                     }
                 }
-                else if (HAS_FILENAME_INFO.IsMatch(name))
+                else if (PPRGX.FILENAME_INFO_TYPE.IsMatch(name))
                 {
-                    customer.Load(FILENAME_INFO.ToDictionary(name));
+                    customer.Load(PPRGX.FILENAME_INFO.ToDictionary(name));
                 }
                 else
                 {
@@ -102,7 +99,7 @@ namespace PostmanLib
                 {
                     PdfReader r = new PdfReader(path);
                     customer.VTNumbers.Load(
-                        VANTAGE_NUMBERS.ToDictionary(
+                        PPRGX.PDF_INPC_VTNUMBERS.ToDictionary(
                             PdfTextExtractor.GetTextFromPage(
                                 r, 1, new SimpleTextExtractionStrategy()
                             )

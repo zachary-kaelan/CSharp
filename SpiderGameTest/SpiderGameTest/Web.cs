@@ -14,8 +14,7 @@ namespace SpiderGameTest
         private PointF Centre { get; set; }
         private Strand[] RadialThreads { get; set; }
         private WebSpiral Spiral { get; set; }
-
-
+        
         public Web(Graphics gfx, PointF centre, WebSpiral spiral, params PointF[] strands)
         {
             this.gfxPallete = gfx;
@@ -52,21 +51,59 @@ namespace SpiderGameTest
 
             List<PointF> strands = new List<PointF>();
 
-            double angleInterval = 360.0 / (double)strandsCount;
+            double angleInterval = 360.0 / strandsCount;
             double targetAngle = 360.0 - (angleInterval / 2.0);
-            for (double currentAngle = angleInterval / 2.0; currentAngle != targetAngle; currentAngle += angleInterval)
+            for (double currentAngle = spiral.AngleStart + (angleInterval / 2.0); currentAngle != targetAngle; currentAngle += angleInterval)
             {
-                PointF point = new PointF();
                 float x = 0;
                 float y = 0;
                 double adjustedAngle = currentAngle % 45.0;
 
-                if (currentAngle < 45 || currentAngle >= 315)
+                if (currentAngle < 45 || currentAngle > 315)
+                {
                     x = gfx.DpiX;
-                else if (currentAngle >= 135 && currentAngle < 225)
+                    y = ((float)Math.Tan(adjustedAngle) * gfx.DpiY);
+                }
+                else if (currentAngle > 135 && currentAngle < 225)
+                {
                     x = 0;
+                    y = gfx.DpiY - ((float)Math.Tan(adjustedAngle) * gfx.DpiY);
+                }
+                else if (currentAngle > 45 && currentAngle < 135)
+                {
+                    x = gfx.DpiX - ((float)Math.Tan(adjustedAngle) * gfx.DpiX);
+                    y = 0;
+                }
+                else if (currentAngle > 225 && currentAngle < 315)
+                {
+                    x = ((float)Math.Tan(adjustedAngle) * gfx.DpiX);
+                    y = gfx.DpiY;
+                }
                 else
-                    x = ((float)Math.Tan(adjustedAngle) * gfx.DpiY);
+                {
+                    switch(currentAngle)
+                    {
+                        case 45:
+                            x = gfx.DpiX;
+                            y = 0;
+                            break;
+
+                        case 135:
+                            x = 0;
+                            y = 0;
+                            break;
+
+                        case 225:
+                            x = 0;
+                            y = gfx.DpiY;
+                            break;
+
+                        case 315:
+                            x = gfx.DpiX;
+                            y = gfx.DpiY;
+                            break;
+                    }
+                }
             }
 
 

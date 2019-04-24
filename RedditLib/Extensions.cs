@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using RedditSharp;
+using RedditSharp.Things;
 
 namespace RedditLib
 {
@@ -193,6 +195,25 @@ namespace RedditLib
                 return Season.Summer;
             else
                 return Season.Fall;
+        }
+
+        public static IEnumerable<Comment> DeDupe(this IEnumerable<Comment> comments, int minutesCheckInterval = 30)
+        {
+            comments = comments.Where(
+                c => !c.AuthorName.EndsWith("bot", StringComparison.CurrentCultureIgnoreCase)
+            ).GroupBy(
+                c => c.ParentId,
+                c => c,
+                (k, g) => g.OrderByDescending(c => c.Score).First()
+            ).GroupBy(
+                c => c.LinkId,
+                c => c,
+                (k, g) => g.OrderByDescending(c => c.Score).Take(10)
+            ).SelectMany(c => c).OrderByDescending(
+                c => c.Score
+            );
+
+            return comments.Take(minutesCheckInterval * 21).Concat(comments.Reverse().Take(minutesCheckInterval * 6));
         }
     }
 }

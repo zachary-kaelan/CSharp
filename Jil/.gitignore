@@ -1,0 +1,9 @@
+bin/
+obj/
+*.suo
+*.sln.ide/
+*.user
+.vs/
+*.lock.json
+Backup/
+UpgradeLog.htm

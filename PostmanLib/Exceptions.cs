@@ -25,4 +25,10 @@ namespace PostmanLib
         public UnknownPDFTypeException(string pdfName) :
             base("The type of '" + pdfName + "' could not be determined.") {}
     }
+
+    public class InvalidBranchException : Exception
+    {
+        public InvalidBranchException(string branch) : 
+            base("Branch \"" + branch + "\" could not be found") { }
+    }
 }

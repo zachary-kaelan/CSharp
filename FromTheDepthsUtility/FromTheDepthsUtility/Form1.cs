@@ -12,11 +12,11 @@ namespace FromTheDepthsUtility
 {
     public partial class Form1 : Form
     {
-        public const double Crackers = 1;
-        public const double Cokers = 1;
-        public const double Desalters = 1;
-        public const double Altitude = 10;
-        public const double Flares = 7;
+        public const float Crackers = 1;
+        public const float Cokers = 1;
+        public const float Desalters = 1;
+        public const float Altitude = 10;
+        public const float Flares = 7;
 
         public const string ListBoxFormat = "{0}, {1}, {2}, {3}";
 
@@ -35,12 +35,12 @@ namespace FromTheDepthsUtility
         private void btnSimulation_Click(object sender, EventArgs e)
         {
 
-            double efficiency = ResourceMath.ProcessingEfficiency(Crackers, Cokers, Desalters, Altitude);
-            double processingTime = ResourceMath.ProcessingTime(Crackers, Cokers, Desalters);
-            double time = 0;
-            double cycleTime = 0;
-            double gas = 0;
-            double fuel = 0;
+            float efficiency = ResourceMath.ProcessingEfficiency(Crackers, Cokers, Desalters, Altitude);
+            float processingTime = ResourceMath.ProcessingTime(Crackers, Cokers, Desalters);
+            float time = 0;
+            float cycleTime = 0;
+            float gas = 0;
+            float fuel = 0;
 
             /*var clmCycle = new ListViewItem();
             var clmFuel = new ListViewItem();

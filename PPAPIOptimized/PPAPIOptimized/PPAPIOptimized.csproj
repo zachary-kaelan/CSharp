@@ -121,6 +121,9 @@
     <Reference Include="WindowsBase">
       <Private>True</Private>
     </Reference>
+    <Reference Include="ZachLib">
+      <HintPath>..\..\ZachLib\bin\Release\ZachLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Customer.cs" />

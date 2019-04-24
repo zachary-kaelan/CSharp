@@ -8,6 +8,7 @@ namespace ZachLib.Logging
 {
     public enum EntryType
     {
+        NONE,
         UICHANGE,
         STATUS,
         DEBUG,
@@ -18,76 +19,138 @@ namespace ZachLib.Logging
         PRESET
     };
 
-    public struct LogUpdate : IDisposable
+    [Flags]
+    internal enum LogUpdateFlags
+    {
+        None = 0,
+        IsListItem,
+        DoLogFileEntry = 2,
+        DoFullErrorLogEntry = 4,
+        HasFileContent = 8,
+        HasLogContent = 16,
+        HasFilename = 32,
+        HasMoreFileContent = 64
+    }
+
+    public class LogUpdate : IDisposable
     {
         public string LogName { get; set; }
-        public object[] FileContent { get; set; }
-        public object[] LogContent { get; set; }
+        public List<object> FileContent { get; set; }
+        public List<object> LogContent { get; set; }
         public EntryType Type { get; set; }
         public string File { get; set; }
-        public DateTime Timestamp { get; set; }
+        public TimeSpan Timestamp { get; set; }
         private bool disposedValue { get; set; }
+        internal LogUpdateFlags Flags { get; set; }
 
-        public LogUpdate(string logName, EntryType type) : this()
+        public LogUpdate()
         {
-            LogName = logName;
-            Timestamp = DateTime.Now;
-            Type = type;
+            FileContent = null;
+            LogContent = null;
+            File = null;
+            Flags = LogUpdateFlags.None;
+        }
+
+        public LogUpdate(string log, EntryType type, bool isListItem = false) : this()
+        {
+            LogName = log;
+            if (!isListItem)
+                Timestamp = DateTime.Now.TimeOfDay;
+            else
+                Flags |= LogUpdateFlags.IsListItem;
             disposedValue = false;
+            Type = type;
         }
 
         public LogUpdate(string log, string fileName, object data) : this(log, EntryType.PRESET)
         {
-            FileContent = new object[] { data };
+            FileContent = new List<object> { data };
             File = fileName;
         }
 
-        public LogUpdate(string log, string fileName, object data, Exception error) : this(log, EntryType.PRESET)
+        public LogUpdate(string log, string fileName, object data, Exception error, bool fullErrorLogEntry = true) : this(log, EntryType.PRESET)
         {
-            FileContent = new object[] { data, error };
+            FileContent = new List<object> { data, error };
             File = fileName;
+            if (fullErrorLogEntry)
+                Flags = LogUpdateFlags.DoFullErrorLogEntry;
         }
 
-        public LogUpdate(string log, string fileName, bool withLogEntry, object data) : this(log, EntryType.PRESET)
+        public LogUpdate(string log, string fileName, bool withLogEntry, object data, bool isListItem = false) : this(log, fileName, withLogEntry, new object[] { data }, isListItem) { }
+
+        public LogUpdate(string log, string fileName, bool withLogEntry, IEnumerable<object> data, bool isListItem = false) : this(log, EntryType.PRESET)
         {
-            FileContent = new object[] { data };
+            FileContent = new List<object>(data);
             File = fileName;
+            if (withLogEntry)
+                Flags |= LogUpdateFlags.DoLogFileEntry;
+            if (isListItem)
+                Flags |= LogUpdateFlags.IsListItem;
         }
 
-        public LogUpdate(string log, string fileName, bool withLogEntry, object data, Exception error) : this(log, EntryType.PRESET)
+        public LogUpdate(string log, string fileName, bool withLogEntry, object data, Exception error, bool fullErrorLogEntry = true, bool isListItem = false) : this(log, EntryType.PRESET)
         {
-            FileContent = new object[] { data, error };
+            FileContent = new List<object> { data, error };
             File = fileName;
+            if (withLogEntry)
+                Flags |= LogUpdateFlags.DoLogFileEntry;
+            if (isListItem)
+                Flags |= LogUpdateFlags.IsListItem;
+            if (fullErrorLogEntry)
+                Flags |= LogUpdateFlags.DoFullErrorLogEntry;
         }
 
         public LogUpdate(string log, EntryType type, string entry1, string entry2) : this(log, type)
         {
-            LogContent = new object[] { entry1, entry2 };
+            LogContent = new List<object> { entry1, entry2 };
         }
 
-        public LogUpdate(string log, object[] logContent) : this(log, EntryType.PRESET)
+        public LogUpdate(string log, IEnumerable<object> logContent) : this(log, EntryType.PRESET)
         {
-            LogContent = logContent;
+            LogContent = new List<object>(logContent);
         }
 
-        public LogUpdate(string log, EntryType type, object[] logContent) : this(log, type)
+        public LogUpdate(string log, string entry) : this(log, EntryType.PRESET)
         {
-            LogContent = logContent;
+            LogContent = new List<object> { entry };
         }
 
-        public LogUpdate(string log, string fileName, object[] logcontent, object data) : this(log, fileName, true, data)
+        public LogUpdate(string log, EntryType type, IEnumerable<object> logContent) : this(log, type)
+        {
+            LogContent = new List<object>(logContent);
+        }
+
+        public LogUpdate(string log, EntryType type, string entry) : this(log, type)
+        {
+            LogContent = new List<object> { entry };
+        }
+
+        /*public LogUpdate(string log, string fileName, object[] logcontent, object data, bool isListItem = false) : this(log, fileName, true, data, isListItem)
         {
             LogContent = logcontent;
+        }*/
+
+        public LogUpdate(string log, string fileName, IEnumerable<object> logcontent, IEnumerable<object> data, bool isListItem = false) : this(log, fileName, true, data, isListItem)
+        {
+            LogContent = new List<object>(logcontent);
+            FileContent = new List<object>(data);
+            if (isListItem)
+                Flags |= LogUpdateFlags.IsListItem;
         }
 
-        public LogUpdate(string log, string fileName, object[] logcontent, object data, Exception error) : this(log, fileName, true, data, error)
+        public LogUpdate(string log, string fileName, IEnumerable<object> logcontent, object data, Exception error, bool fullErrorLogEntry = true, bool isListItem = false) : this(log, fileName, true, data, error, isListItem)
         {
-            LogContent = logcontent;
+            LogContent = new List<object>(logcontent);
+            FileContent = new List<object>() { data, error };
+            if (isListItem)
+                Flags |= LogUpdateFlags.IsListItem;
+            if (fullErrorLogEntry)
+                Flags |= LogUpdateFlags.DoFullErrorLogEntry;
         }
 
         public LogUpdate(string log, string key, string value) : this(log, EntryType.PRESET)
         {
-            LogContent = new object[] { key, value };
+            LogContent = new List<object> { key, value };
         }
         
         public void Dispose(bool disposing)
@@ -98,7 +161,7 @@ namespace ZachLib.Logging
                 {
                     File = null;
                     LogName = null;
-                    Timestamp = new DateTime();
+                    Timestamp = new TimeSpan();
                 }
 
                 LogContent = null;
@@ -114,6 +177,22 @@ namespace ZachLib.Logging
         public void Enqueue()
         {
             LogManager.Enqueue(this);
+        }
+
+        internal void Initialize()
+        {
+            if (!String.IsNullOrWhiteSpace(File))
+                Flags |= LogUpdateFlags.HasFilename;
+            if (FileContent != null && FileContent.Count > 0)
+            {
+                Flags |= LogUpdateFlags.HasFileContent;
+                if (FileContent.Count > 1)
+                    Flags |= LogUpdateFlags.HasMoreFileContent;
+            }
+            if (LogContent != null && LogContent.Any())
+                Flags |= LogUpdateFlags.HasLogContent;
+            if (Flags > 0 && Flags.HasFlag(LogUpdateFlags.None))
+                Flags &= ~LogUpdateFlags.None;
         }
     }
 

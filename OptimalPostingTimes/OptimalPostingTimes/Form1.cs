@@ -16,7 +16,6 @@ using RedditSharp.Extensions;
 using RedditSharp.Multi;
 using RedditSharp.Things;
 using RedditLib;
-using FourChanLib;
 
 namespace OptimalPostingTimes
 {
@@ -91,10 +90,12 @@ namespace OptimalPostingTimes
             FinalRatings RedditRatings = new FinalRatings(all.Posts.Select(p => new RedditThing(p)));*/
             //posts.SaveAs(REDDIT_PATH + "AllPosts.txt");
 
-            Subreddit all = reddit.RSlashAll;
+            /*Subreddit all = reddit.RSlashAll;
+            var post = all.Posts.First();
+            post.
             all = null;
             reddit = null;
-            webAgent = null;
+            webAgent = null;*/
 
             /*RedditRatings.ActualByHour = new SortedDictionary<int, int>(
                 posts.GroupBy(

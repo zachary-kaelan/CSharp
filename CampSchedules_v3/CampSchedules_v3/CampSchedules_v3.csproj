@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{998E8843-C5D1-49F5-897A-2B1C07A2C491}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CampSchedules_v3</RootNamespace>
+    <AssemblyName>CampSchedules_v3</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="CampSchedulesLib_v2">
+      <HintPath>..\..\CampSchedulesLib_v2\bin\Debug\CampSchedulesLib_v2.dll</HintPath>
+    </Reference>
+    <Reference Include="Jil, Version=2.16.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Jil.2.16.0\lib\net45\Jil.dll</HintPath>
+    </Reference>
+    <Reference Include="SapphoLib">
+      <HintPath>..\..\SapphoLib\bin\Debug\SapphoLib.dll</HintPath>
+    </Reference>
+    <Reference Include="Sigil, Version=4.7.0.0, Culture=neutral, PublicKeyToken=2d06c3494341c8ab, processorArchitecture=MSIL">
+      <HintPath>..\packages\Sigil.4.7.0\lib\net45\Sigil.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="ZachLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\ZachLib\bin\Debug\ZachLib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ByteGenerator.cs" />
+    <Compile Include="EvoStats.cs" />
+    <Compile Include="FitnessInfo\ActivityFitnessInfo.cs" />
+    <Compile Include="SimpleGeneticAlgorithm\SelectionMethodPerformance.cs" />
+    <Compile Include="SimpleGeneticAlgorithm\SimpleChromosome.cs" />
+    <Compile Include="SimpleGeneticAlgorithm\SimpleFullGene.cs" />
+    <Compile Include="SimpleGeneticAlgorithm\SimpleFullGeneCollection.cs" />
+    <Compile Include="SimpleGeneticAlgorithm\SimpleGene.cs" />
+    <Compile Include="SimpleGeneticAlgorithm\SimpleImmutable.cs" />
+    <Compile Include="SimpleGeneticAlgorithm\SimpleGenePool.cs" />
+    <Compile Include="SurvivalInfo\DaySurvivalInfo.cs" />
+    <Compile Include="FitnessInfo\DormFitnessInfo.cs" />
+    <Compile Include="SurvivalInfo\ActivitySurvivalInfo.cs" />
+    <Compile Include="Class1.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="SurvivalInfo\DormSurvivalInfo.cs" />
+    <Compile Include="GeneticAlgorithm\Chromosome.cs" />
+    <Compile Include="GeneticAlgorithm\Gene.cs" />
+    <Compile Include="GeneticAlgorithm\GeneParameter.cs" />
+    <Compile Include="GeneticAlgorithm\GenePool.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SurvivalStats.cs" />
+    <Compile Include="UnboundedByteGenerator.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

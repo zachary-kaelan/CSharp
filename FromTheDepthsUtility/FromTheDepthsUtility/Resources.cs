@@ -11,33 +11,33 @@ namespace FromTheDepthsUtility
         // Each resource zone has a growth rate g and maximum storage R
         // r is the amount of currently stored resources
 
-        public static double ResourceGenerationRate(double growthRate, double maxResources, double currentResources)
+        public static float ResourceGenerationRate(float growthRate, float maxResources, float currentResources)
         {
-            return (0.1 * growthRate * maxResources) / Math.Max(10.0, currentResources);
+            return (0.1 * growthRate * maxResources) / Math.Max(10f, currentResources);
             // Resource generation is maximizd when current resources reaches 10.
             // Max rate is gR / 100
         }
 
-        public static double GatheringRatePerComponent(double currentResources)
+        public static float GatheringRatePerComponent(float currentResources)
         {
             return 0.05 * Math.Pow(currentResources, 0.5);
         }
 
-        public static double SteadyStateResourceLevel(double growthRate, double maxResources, double numberOfMachines)
+        public static float SteadyStateResourceLevel(float growthRate, float maxResources, float numberOfMachines)
         {
-            return Math.Pow((2.0 * growthRate * maxResources) / numberOfMachines, 2.0 / 3.0);
+            return Math.Pow((2f * growthRate * maxResources) / numberOfMachines, 2f / 3f);
         }
 
         // When below maximum
-        public static double SteadyStateExtractionRate(double growthRate, double maxResources, double numberOfMachines)
+        public static float SteadyStateExtractionRate(float growthRate, float maxResources, float numberOfMachines)
         {
-            return 0.5 * Math.Pow(numberOfMachines, 2.0 / 3.0) * Math.Pow(2.0 * growthRate * maxResources, 1.0 / 3.0);
+            return 0.5 * Math.Pow(numberOfMachines, 2f / 3f) * Math.Pow(2f * growthRate * maxResources, 1f / 3f);
         }
 
-        public static double MachinesForMaxExtractionRate(double growthRate, double maxResources)
+        public static float MachinesForMaxExtractionRate(float growthRate, float maxResources)
         {
             // Assuming continuous gathering
-            return (2.0 * growthRate * maxResources) / Math.Pow(10.0, 1.5);
+            return (2f * growthRate * maxResources) / Math.Pow(10f, 1.5);
         }
 
         // Each cubic meter of resource storage stores 2000 units
@@ -56,14 +56,14 @@ namespace FromTheDepthsUtility
         // number of c(O)kers
         // number of (D)esalters
         // y = altitude of refinery
-        public static double ProcessingEfficiency(double crackers, double cokers, double desalters, double altitude)
+        public static float ProcessingEfficiency(float crackers, float cokers, float desalters, float altitude)
         {
-            return ((10.0 * ((0.5 * crackers) + 1.0) * ((0.3 * cokers) + 1.0)) / Math.Max(altitude / 5.0, 1.0)) * Math.Pow(1.1, Math.Min(desalters, 1));
+            return ((10f * ((0.5 * crackers) + 1f) * ((0.3 * cokers) + 1f)) / Math.Max(altitude / 5f, 1f)) * Math.Pow(1.1, Math.Min(desalters, 1));
         }
 
-        public static double ProcessingTime(double crackers, double cokers, double desalters)
+        public static float ProcessingTime(float crackers, float cokers, float desalters)
         {
-            return ((1.5 * crackers) + 1.0) * ((0.6 * cokers) + 1) * Math.Pow(1.2, Math.Min(desalters, 1));
+            return ((1.5 * crackers) + 1f) * ((0.6 * cokers) + 1) * Math.Pow(1.2, Math.Min(desalters, 1));
         }
 
         // Refineries have a Dangerous (G)as level
@@ -71,7 +71,7 @@ namespace FromTheDepthsUtility
         // G increases by 0.8 * Efficiency every 2 seconds
         // Tilting the Refinery induces extra G, up to 20 at 90 degrees
 
-        public static double DangerousGasGeneration(double currentGas, double efficiency, double flares, bool desalter = true)
+        public static float DangerousGasGeneration(float currentGas, float efficiency, float flares, bool desalter = true)
         {
             return (
                 (0.8 * efficiency) - 
@@ -81,21 +81,21 @@ namespace FromTheDepthsUtility
             );
         }
         
-        public static double FlaresForSafe(double efficiency, bool desalter = true)
+        public static float FlaresForSafe(float efficiency, bool desalter = true)
         {
-            double flares = 0;
+            float flares = 0;
             while (true)
             {
-                double gas = 0;
-                double lastGas = 0;
+                float gas = 0;
+                float lastGas = 0;
 
                 do
                 {
                     lastGas = DangerousGasGeneration(gas, efficiency, flares, desalter);
                     gas += lastGas;
-                } while (gas < 50.0 && lastGas > 0.125);
+                } while (gas < 50f && lastGas > 0.125);
 
-                if (gas < 50.0)
+                if (gas < 50f)
                     return flares;
                 ++flares;
             }

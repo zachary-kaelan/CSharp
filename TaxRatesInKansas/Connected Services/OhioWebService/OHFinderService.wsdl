@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:tns="https://thefinder.tax.ohio.gov/OHFinderService/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" targetNamespace="https://thefinder.tax.ohio.gov/OHFinderService/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" targetNamespace="https://thefinder.tax.ohio.gov/OHFinderService/">
+      <s:element name="AddressLine" type="s:string" />
+      <s:element name="City" type="s:string" />
+      <s:element name="StateOrProvince" type="s:string" />
+      <s:element name="PostalCode" type="s:string" />
+      <s:element name="CountryCode" type="s:string" />
+      <s:element name="SalesAmount" type="s:double" />
+      <s:element name="SalesDate" type="s:dateTime" />
+      <s:element name="ReturnMultiple" type="s:boolean" />
+      <s:element name="GetOHSalesTaxByAddressResult" type="tns:AddressReturn" />
+      <s:complexType name="AddressReturn">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="addressResponse" type="tns:AddressResponse" />
+          <s:element minOccurs="0" maxOccurs="1" name="taxResponse" type="tns:ArrayOfTaxResponse" />
+          <s:element minOccurs="1" maxOccurs="1" name="resultCode" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="result" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="AddressResponse">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="FoundStreetAddress" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FoundAddressLine2" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FoundCity" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FoundState" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FoundZipCode" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FoundZipPlus4" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FoundPhysicalCity" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="ArrayOfTaxResponse">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="unbounded" name="TaxResponse" nillable="true" type="tns:TaxResponse" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="TaxResponse">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="StateName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="StateFips" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CountyName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="CountyFips" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TransitName" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="TransitFips" type="s:string" />
+          <s:element minOccurs="1" maxOccurs="1" name="GeneralTaxIntrastate" type="s:double" />
+          <s:element minOccurs="1" maxOccurs="1" name="GeneralTaxInterstate" type="s:double" />
+          <s:element minOccurs="1" maxOccurs="1" name="FoodDrugTaxIntrastate" type="s:double" />
+          <s:element minOccurs="1" maxOccurs="1" name="FoodDrugTaxInterstate" type="s:double" />
+          <s:element minOccurs="1" maxOccurs="1" name="TotalSalesTaxAmount" type="s:double" />
+          <s:element minOccurs="1" maxOccurs="1" name="TotalSalesAmountWithTax" type="s:double" />
+        </s:sequence>
+      </s:complexType>
+      <s:element name="GetOHSalesTaxByZipCodeResult" type="tns:ZipCodeReturn" />
+      <s:complexType name="ZipCodeReturn">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="zipResponse" type="tns:ZipResponse" />
+          <s:element minOccurs="0" maxOccurs="1" name="taxResponse" type="tns:ArrayOfTaxResponse" />
+          <s:element minOccurs="1" maxOccurs="1" name="resultCode" type="s:int" />
+          <s:element minOccurs="0" maxOccurs="1" name="result" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+      <s:complexType name="ZipResponse">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="FoundZipCode" type="s:string" />
+          <s:element minOccurs="0" maxOccurs="1" name="FoundZipPlus4" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+    </s:schema>
+  </wsdl:types>
+  <wsdl:message name="GetOHSalesTaxByAddressSoapIn">
+    <wsdl:part name="AddressLine" element="tns:AddressLine" />
+    <wsdl:part name="City" element="tns:City" />
+    <wsdl:part name="StateOrProvince" element="tns:StateOrProvince" />
+    <wsdl:part name="PostalCode" element="tns:PostalCode" />
+    <wsdl:part name="CountryCode" element="tns:CountryCode" />
+    <wsdl:part name="SalesAmount" element="tns:SalesAmount" />
+    <wsdl:part name="SalesDate" element="tns:SalesDate" />
+    <wsdl:part name="ReturnMultiple" element="tns:ReturnMultiple" />
+  </wsdl:message>
+  <wsdl:message name="GetOHSalesTaxByAddressSoapOut">
+    <wsdl:part name="GetOHSalesTaxByAddressResult" element="tns:GetOHSalesTaxByAddressResult" />
+  </wsdl:message>
+  <wsdl:message name="GetOHSalesTaxByZipCodeSoapIn">
+    <wsdl:part name="PostalCode" element="tns:PostalCode" />
+    <wsdl:part name="SalesAmount" element="tns:SalesAmount" />
+    <wsdl:part name="SalesDate" element="tns:SalesDate" />
+    <wsdl:part name="ReturnMultiple" element="tns:ReturnMultiple" />
+  </wsdl:message>
+  <wsdl:message name="GetOHSalesTaxByZipCodeSoapOut">
+    <wsdl:part name="GetOHSalesTaxByZipCodeResult" element="tns:GetOHSalesTaxByZipCodeResult" />
+  </wsdl:message>
+  <wsdl:portType name="OHFinderServiceSoap">
+    <wsdl:operation name="GetOHSalesTaxByAddress">
+      <documentation xmlns="http://schemas.xmlsoap.org/wsdl/">Standardizes an Ohio address and retrieves sales tax information.</documentation>
+      <wsdl:input message="tns:GetOHSalesTaxByAddressSoapIn" />
+      <wsdl:output message="tns:GetOHSalesTaxByAddressSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetOHSalesTaxByZipCode">
+      <documentation xmlns="http://schemas.xmlsoap.org/wsdl/">Locates an Ohio zip code and retrieves sales tax information.</documentation>
+      <wsdl:input message="tns:GetOHSalesTaxByZipCodeSoapIn" />
+      <wsdl:output message="tns:GetOHSalesTaxByZipCodeSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="OHFinderServiceSoap" type="tns:OHFinderServiceSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="GetOHSalesTaxByAddress">
+      <soap:operation soapAction="https://thefinder.tax.ohio.gov/OHFinderService/GetOHSalesTaxByAddress" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetOHSalesTaxByZipCode">
+      <soap:operation soapAction="https://thefinder.tax.ohio.gov/OHFinderService/GetOHSalesTaxByZipCode" style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="OHFinderService">
+    <wsdl:port name="OHFinderServiceSoap" binding="tns:OHFinderServiceSoap">
+      <soap:address location="https://thefinder.tax.ohio.gov/OHFinderService/OHFinderService.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

@@ -55,6 +55,12 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="LaserMath.cs" />
+    <Compile Include="Missiles\IMissileModule.cs" />
+    <Compile Include="Missiles\MissileAerodynamics.cs" />
+    <Compile Include="Missiles\MissileMath.cs" />
+    <Compile Include="Missiles\Missile.cs" />
+    <Compile Include="Missiles\MissilePropulsion.cs" />
+    <Compile Include="Missiles\Models.cs" />
     <Compile Include="Models.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

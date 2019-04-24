@@ -27,6 +27,8 @@ using PPLib;
 using RGX.VT;
 using RGX.Utils;
 using Match = System.Text.RegularExpressions.Match;
+using ZachLib;
+using ZachLib.Logging;
 
 namespace VantageTracker
 {
@@ -166,18 +168,17 @@ namespace VantageTracker
         //public const string billSumTimesRGX = @"on (\d\d\/\d\d\/\d\d (?:.+?) (?:AM|PM))";
         
         public const string DOCS_PATH = @"C:\DocUploads\Docs\";
-        private LogManager Logger { get; set; }
 
-        public VTNav(string initBranch = null, LogManager logger = null)
+        public VTNav(string initBranch = null)
         {
-            if (logger == null)
+            /*if (logger == null)
             {
                 Logger = new LogManager(
                     "[{0}] [{1}]:\t{2} ~ {3}",
                     LOG_DATE_FORMAT
 
                 );
-            }
+            }*/
 
             Zillow.TryWriteLineAsync("", log);
             client = new RestClient("https://myvantagetracker.com/");

@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D86EBBE7-5EAE-4CA5-9773-40F24FCF76EA}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CampSchedulesLib_v2</RootNamespace>
+    <AssemblyName>CampSchedulesLib_v2</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>7.2</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>7.2</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="ZachLib">
+      <HintPath>..\ZachLib\bin\Debug\ZachLib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Models\CSV\ActivityCSV.cs" />
+    <Compile Include="Models\CSV\BlockCSV.cs" />
+    <Compile Include="Models\CSV\DormActivityPriorityCSV.cs" />
+    <Compile Include="Models\CSV\ManuallyScheduledCSV.cs" />
+    <Compile Include="Models\DormActivityOption.cs" />
+    <Compile Include="Models\DormActivityOptionComparer.cs" />
+    <Compile Include="Models\Info\ActivityInfo.cs" />
+    <Compile Include="Models\PresetDormConflicts.cs" />
+    <Compile Include="Models\Reports\DormReport.cs" />
+    <Compile Include="Models\Scheduling\Block.cs" />
+    <Compile Include="Models\Scheduling\ConflictNode.cs" />
+    <Compile Include="Models\Scheduling\ConflictsResolveTracking.cs" />
+    <Compile Include="Models\Scheduling\Day.cs" />
+    <Compile Include="Models\Scheduling\DormActivities.cs" />
+    <Compile Include="Models\Info\DormInfo.cs" />
+    <Compile Include="Models\Scheduling\DormScheduleTracking.cs" />
+    <Compile Include="Models\Scheduling\InterDormTracking.cs" />
+    <Compile Include="Models\Scheduling\Schedule.cs" />
+    <Compile Include="Models\Scheduling\ScheduledActivity.cs" />
+    <Compile Include="Models\Thing.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

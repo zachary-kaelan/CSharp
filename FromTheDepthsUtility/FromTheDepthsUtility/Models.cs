@@ -7,20 +7,20 @@ using System.Threading.Tasks;
 
 namespace FromTheDepthsUtility
 {
-    public struct Shell : IDictionary<ShellInstance, Block[]>
+    public class Shell : IDictionary<ShellInstance, Block[]>
     {
-        public double Velocity { get; set; }
-        public double Volume { get; set; }
-        public double ShellHealth { get; set; }
+        public float Velocity { get; set; }
+        public float Volume { get; set; }
+        public float ShellHealth { get; set; }
         private Dictionary<ShellInstance, Block[]> Shells { get; set; }
 
         public Block[] this[ShellInstance key] { get => Shells[key]; set => Shells[key] = value; }
 
-        public Shell(double diameter, double velocity, double numFuses = 0)
+        public Shell(float diameter, float velocity, float numFuses = 0)
         {
             Velocity = velocity;
-            ShellHealth = 300.0 * Math.PI * Math.Pow(diameter, 2.0);
-            Volume = Math.Pow((diameter / 400.0), 1.8) - (0.25 * numFuses);
+            ShellHealth = 300f * Math.PI * Math.Pow(diameter, 2f);
+            Volume = Math.Pow((diameter / 400f), 1.8) - (0.25 * numFuses);
             Shells = new Dictionary<ShellInstance, Block[]>();
         }
 
@@ -101,13 +101,13 @@ namespace FromTheDepthsUtility
 
     public struct ShellDamage
     {
-        public double Kinetic { get; set; }
-        public double AP { get; set; }
-        public double Explosive { get; set; }
-        public double EMP { get; set; }
+        public float Kinetic { get; set; }
+        public float AP { get; set; }
+        public float Explosive { get; set; }
+        public float EMP { get; set; }
         public Nullable<Fragments> Fragmentation { get; set; }
 
-        public ShellDamage(double kinetic, double armorPierce, double explosive, double emp, Fragments fragments)
+        public ShellDamage(float kinetic, float armorPierce, float explosive, float emp, Fragments fragments)
         {
             this.Kinetic = kinetic;
             this.AP = armorPierce;
@@ -116,7 +116,7 @@ namespace FromTheDepthsUtility
             this.Fragmentation = fragments;
         }
 
-        public ShellDamage(double kin, double pierce, Fragments frag, double exp = 0, double elec = 0)
+        public ShellDamage(float kin, float pierce, Fragments frag, float exp = 0, float elec = 0)
         {
             Kinetic = kin;
             AP = pierce;
@@ -125,7 +125,7 @@ namespace FromTheDepthsUtility
             Fragmentation = frag;
         }
 
-        public ShellDamage(double vel, double kin, double pierce, double exp = 0, double elec = 0)
+        public ShellDamage(float vel, float kin, float pierce, float exp = 0, float elec = 0)
         {
             Kinetic = kin;
             AP = pierce;
@@ -134,51 +134,95 @@ namespace FromTheDepthsUtility
             Fragmentation = null;
         }
 
-        public ShellDamage(double baseKinetic, double baseAP, Pellets effectivePellets)
+        public ShellDamage(float baseKinetic, float baseAP, Pellets effectivePellets)
         {
-            Kinetic = baseKinetic + (100.0 * effectivePellets.Hardner);
-            AP = baseAP + (1.5 * effectivePellets.Hardner);
-            Explosive = 200.0 * effectivePellets.Explosive;
-            EMP = effectivePellets.EMP * (10.0 * volume);
+            Kinetic = baseKinetic + (100f * effectivePellets.Hardner);
+            AP = baseAP + (1.5f * effectivePellets.Hardner);
+            Explosive = 200f * effectivePellets.Explosive;
+            EMP = effectivePellets.EMP * (10f * effectivePellets.Volume);
             Fragmentation = new Fragments(effectivePellets.Fragmentation);
         }
     }
 
-    public struct Fragments
+    public struct KineticRichocet
     {
-        public double count { get; set; }
-        public double kinetic { get; set; }
-        public const double AP = 6;
+        public float RichocetChance { get; set; }
+        private float CosTheta { get; set; }
+        private float StandardMultiplier { get; set; }
+        public float RichocetDamageMultiplier { get; }
+        public float NonRichocetDamageMultiplier { get; }
 
-        public Fragments(double n)
+        public KineticRichocet(float cosTheta, float standardMultiplier) : this()
         {
-            count = Math.Min(n, 60.0);
-            kinetic = n > 60.0 ? ((100.0 * n) / 60.0) : 100.0;
+            CosTheta = cosTheta;
+            StandardMultiplier = standardMultiplier;
+        }
+
+        public bool CanRichocet(float totalKineticDamage, float blockHealth, out KineticRemainingDamage remainingDamage)
+        {
+            remainingDamage = new KineticRemainingDamage();
+            remainingDamage.DamageDealt = Math.Min(totalKineticDamage * StandardMultiplier * CosTheta, blockHealth);
+            if (remainingDamage.DamageDealt >= blockHealth)
+            {
+                remainingDamage.NonRichocetDamage = totalKineticDamage - (blockHealth / StandardMultiplier);
+                return false;
+            }
+            else
+            {
+                remainingDamage.NonRichocetDamage = totalKineticDamage - (remainingDamage.DamageDealt / (StandardMultiplier * CosTheta));
+                if (RichocetChance == 0)
+                    return false;
+                else
+                {
+                    remainingDamage.RichocetDamage = totalKineticDamage - (remainingDamage.DamageDealt / StandardMultiplier);
+                    return true;
+                }
+            }
         }
     }
 
-    public struct Block
+    public struct KineticRemainingDamage
     {
-        public double Health { get; set; }
-        public double Weight { get; set; }
-        public double ArmourClass { get; set; }
-        public double CombinedAC { get; set; }
+        public float DamageDealt { get; set; }
+        public float RichocetDamage { get; set; }
+        public float NonRichocetDamage { get; set; }
+    }
+
+    public struct Fragments
+    {
+        public float count { get; set; }
+        public float kinetic { get; set; }
+        public const float AP = 6;
+
+        public Fragments(float n)
+        {
+            count = Math.Min(n, 60f);
+            kinetic = n > 60f ? ((100f * n) / 60f) : 100f;
+        }
+    }
+
+    public class Block
+    {
+        public float Health { get; set; }
+        public float Weight { get; set; }
+        public float ArmourClass { get; set; }
+        public float CombinedAC { get; set; }
         public Tuple<int, int, int> Size { get; set; }
         public int Cost { get; set; }
         public bool Destroyed { get; set;  }
     }
 
-    public struct Pellets
+    public class Pellets
     {
-        public double Hardner { get; set; }
-        public double Explosive { get; set; }
-        public double EMP { get; set; }
-        public double Fragmentation { get; set; }
+        public float Hardner { get; set; }
+        public float Explosive { get; set; }
+        public float EMP { get; set; }
+        public float Fragmentation { get; set; }
 
-        private double Total { get; set; }
-        private double Volume { get; set; }
+        private float Total { get; set; }
+        internal float Volume { get; set; }
 
-        public Pellets(double volume, double hardner = 0, double explosive = 0, double fragmentation = 0, double emp = 0)
+        public Pellets(float volume, float hardner = 0, float explosive = 0, float fragmentation = 0, float emp = 0)
         {
             Hardner = hardner;
             Explosive = explosive;
@@ -189,44 +233,44 @@ namespace FromTheDepthsUtility
             this.Total = this.Hardner + this.Explosive + this.EMP + this.Fragmentation;
         }
 
-        public double GetTotal()
+        public float GetTotal()
         {
             return this.Total;
         }
 
-        public double GetDensity()
+        public float GetDensity()
         {
             return this.Total / Volume;
         }
 
-        public ShellDamage GetDamage(double velocity, bool isEffective = true)
+        public ShellDamage GetDamage(float velocity, bool isEffective = true)
         {
             Pellets temp = isEffective ? this : this.EffectivePellets();
             return new ShellDamage(
-                (2.0 * velocity * Volume) + (100.0 * temp.Hardner),
-                3.0 + (velocity / 150.0) + (1.5 * temp.Hardner),
-                200.0 * temp.Explosive,
-                10.0 * Volume * temp.EMP,
+                (2f * velocity * Volume) + (100f * temp.Hardner),
+                3f + (velocity / 150f) + (1.5f * temp.Hardner),
+                200f * temp.Explosive,
+                10f * Volume * temp.EMP,
                 new Fragments(temp.Fragmentation)
             );
         }
 
-        public double EffectiveTotal()
+        public float EffectiveTotal()
         {
             return EffectiveTotal(this.GetDensity());
         }
 
-        public double EffectiveTotal(double density)
+        public float EffectiveTotal(float density)
         {
-            return 10.0 * (1.0 - Math.Pow(0.9, density));
+            return 10f * (1f - (float)Math.Pow(0.9, density));
         }
 
-        public double EffectiveToTotalRatio()
+        public float EffectiveToTotalRatio()
         {
             return this.EffectiveToTotalRatio(this.GetDensity());
         }
 
-        public double EffectiveToTotalRatio(double density)
+        public float EffectiveToTotalRatio(float density)
         {
             return this.EffectiveTotal(density) / this.Total;
         }
@@ -236,9 +280,9 @@ namespace FromTheDepthsUtility
             return this.EffectivePellets(this.GetDensity());
         }
 
-        public Pellets EffectivePellets(double density)
+        public Pellets EffectivePellets(float density)
         {
-            double effectiveToTotalRatio = this.EffectiveToTotalRatio(density);
+            float effectiveToTotalRatio = this.EffectiveToTotalRatio(density);
             return new Pellets(
                 Hardner * effectiveToTotalRatio,
                 Explosive * effectiveToTotalRatio,
@@ -248,22 +292,22 @@ namespace FromTheDepthsUtility
         }
     }
 
-    public struct ShellInstance
+    public class ShellInstance
     {
         public Pellets EffectivePellets { get; set; }
         public ShellDamage Damage { get; set; }
-        public double AngleMultiplier { get; set; }
-        public double StartingDamagePotential { get; set; }
-        public double EndingDamagePotential { get; set; }
-        public int BlocksDestroyed { get; set; }
+        public float AngleMultiplier { get; set; }
+        public float StartingDamagePotential { get; set; }
+        public float EndingDamagePotential { get; set; }
+        public byte BlocksDestroyed { get; set; }
 
-        public ShellInstance(Pellets pellets, double volume, double velocity, double angleOfPenetration = 0, bool radians = true)
+        public ShellInstance(Pellets pellets, float volume, float velocity, float angleOfPenetration = 0, bool radians = true)
         {
             BlocksDestroyed = 0;
             StartingDamagePotential = 0;
             EndingDamagePotential = 0;
 
-            this.AngleMultiplier = Math.Cos(radians ? angleOfPenetration : angleOfPenetration * (Math.PI / 180.0));
+            this.AngleMultiplier = (float)Math.Cos(radians ? angleOfPenetration : angleOfPenetration * (Math.PI / 180f));
             this.EffectivePellets = pellets.EffectivePellets();
             this.Damage = EffectivePellets.GetDamage(velocity);
         }
@@ -271,19 +315,19 @@ namespace FromTheDepthsUtility
         private static readonly Random richocetChance = new Random();
         public bool CheckRichocet(Block outmostBlock)
         {
-            double multiplier = DamageMath.DefaultDamageMultiplier(Damage.AP, outmostBlock.CombinedAC);
+            float multiplier = DamageMath.DefaultDamageMultiplier(Damage.AP, outmostBlock.CombinedAC);
             StartingDamagePotential = Damage.Kinetic;
             EndingDamagePotential = Damage.Kinetic;
 
-            double firstHit = Damage.Kinetic * multiplier * AngleMultiplier;
+            float firstHit = Damage.Kinetic * multiplier * AngleMultiplier;
             // if the shell is unable to penetrate
             if (firstHit < outmostBlock.Health)
             {
                 // if the shell richocets
                 EndingDamagePotential = Damage.Kinetic - (firstHit / (
                     richocetChance.NextDouble() <= Math.Pow(
-                        1.0 - AngleMultiplier,
-                        (2.0 * Damage.AP) / outmostBlock.CombinedAC
+                        1f - AngleMultiplier,
+                        (2f * Damage.AP) / outmostBlock.CombinedAC
                     ) ? multiplier : multiplier * AngleMultiplier
                 ));
                 return true;

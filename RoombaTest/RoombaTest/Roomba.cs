@@ -11,12 +11,18 @@ namespace RoombaTest
 {
     public class Roomba : IDisposable
     {
-        private SerialPort IO;
+        public SerialPort IO { get; private set; }
+
+        private const bool DEBUG_MODE = true;
+
+        public bool AwaitingResponse { get; private set; }
 
         private bool IsValid()
         {
             return IO.IsOpen;
         }
+
+        public bool TryToConnect(string portName) => SetPort("COM3");
 
         public bool TryToConnect()
         {
@@ -41,7 +47,7 @@ namespace RoombaTest
                 {
                     IO.Close(); //Just in case port is already taken
                 }
-                IO = new SerialPort(portNum, 57600, Parity.None, 8, StopBits.One);
+                IO = new SerialPort(portNum, 115200, Parity.None, 8, StopBits.One);
                 IO.DtrEnable = false;
                 IO.Handshake = Handshake.None;
                 IO.RtsEnable = false;
@@ -49,8 +55,8 @@ namespace RoombaTest
                 IO.Open();
 
                 // Every stream of commands must start with byte 128
-                IO.DataReceived += IO_DataReceived;
-                return SendCommand(new byte[] { 128 });
+                //IO.DataReceived += IO_DataReceived;
+                return SendCommand(false, new byte[] { 128 });
             }
             catch
             {
@@ -74,9 +80,9 @@ namespace RoombaTest
                     byte[] on = new byte[] { 128, 139, bits, (byte)(byte.MaxValue / bits), (byte)(byte.MaxValue - (byte.MaxValue / bits)) };
                     for (int i = 0; i < numBlinks; ++i)
                     {
-                        SendCommand(on);
+                        SendCommand(false, on);
                         Thread.Sleep(shortSleepTime);
-                        SendCommand(off);
+                        SendCommand(false, off);
                         Thread.Sleep(shortSleepTime);
                     }
                     Thread.Sleep(shortSleepTime);
@@ -90,19 +96,30 @@ namespace RoombaTest
 
         private void IO_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
+            AwaitingResponse = false;
             var numOfBytes = IO.BytesToRead;
             byte[] sensorsData = new byte[numOfBytes];
             IO.Read(sensorsData, 0, numOfBytes);
-            Console.WriteLine("[" + String.Join("][", sensorsData.Select(b => b.ToString())) + "]");
+            if (DEBUG_MODE)
+            {
+                Console.WriteLine("Bytes Read: " + numOfBytes);
+                foreach(byte data in sensorsData)
+                {
+                    Console.WriteLine(Convert.ToString(data, 2).PadLeft(8, '0') + "\t" + data.ToString().PadLeft(3, '0'));
+                }
+                Console.WriteLine();
+            }
+            else
+                Console.WriteLine("[" + String.Join("][", sensorsData.Select(b => b.ToString())) + "]");
             //set sensors…
         }
 
-        private bool SendCommand(IEnumerable<byte> commandCollection)
+        public bool SendCommand(bool awaitingResponse, params byte[] commands)
         {
             try
             {
-                var commandArr = commandCollection.ToArray();
-                IO.Write(commandArr, 0, commandArr.Length);
+                AwaitingResponse = awaitingResponse;
+                IO.Write(commands, 0, commands.Length);
                 return true;
             }
             catch

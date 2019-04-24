@@ -8,14 +8,14 @@ namespace FromTheDepthsUtility
 {
     public static class CRAMMath
     {
-        public static double ShellDiameter(double numGaugeIncreasers)
+        public static float ShellDiameter(float numGaugeIncreasers)
         {
-            return 200.0 + (2000 * (1 - Math.Pow(0.95, numGaugeIncreasers)));
+            return 200f + (2000 * (1 - (float)Math.Pow(0.95, numGaugeIncreasers)));
         }
 
-        public static double ShellVolume(double diameter, double fuses)
+        public static float ShellVolume(float diameter, float fuses)
         {
-            return Math.Pow(diameter / 400.0, 1.8) - (0.25 * fuses);
+            return (float)Math.Pow(diameter / 400f, 1.8) - (0.25f * fuses);
         }
         
         // Base muzzle velocity scales linearly from 60 m/s at 200mm to 100 m/s at 2000mm
@@ -23,16 +23,16 @@ namespace FromTheDepthsUtility
         // Base kinetic damage is 2 * V * (v)elocity
         // Base AP is (3 + v) / 150
 
-        public static double MuzzleVelocity(double diameter)
+        public static float MuzzleVelocity(float diameter)
         {
-            return ((Math.Max(200.0, diameter) - 200.0) * (1.0 / 45.0)) + 60.0;
+            return ((Math.Max(200f, diameter) - 200f) * (1f / 45f)) + 60f;
         }
 
         // Packing rate is 0.1 per second per effective material box
         // Each box counts as 0.5 effective, plus 1 for every attached autoloader
         // Packing density = Ptotal / V
 
-        public static double PackingDensity(double pelletsTotal, double volume)
+        public static float PackingDensity(float pelletsTotal, float volume)
         {
             return pelletsTotal / volume;
         }
@@ -40,14 +40,14 @@ namespace FromTheDepthsUtility
         // 1 density unit holds V pellets depending on gauge
         // 100 density max
         // Each density unit is only 90% as effective as the last
-        public static double EffectivePelletCount(double pelletsRaw, double density, double pelletsTotal, double volume)
+        public static float EffectivePelletCount(float pelletsRaw, float density, float pelletsTotal, float volume)
         {
-            return 10.0 * volume * (pelletsRaw / pelletsTotal) * (1.0 - Math.Pow(0.9, density));
+            return 10f * volume * (pelletsRaw / pelletsTotal) * (1f - (float)Math.Pow(0.9, density));
         }
 
-        public static double EffectivePelletCount(double volume, double density)
+        public static float EffectivePelletCount(float volume, float density)
         {
-            return 10.0 * volume * (1.0 - Math.Pow(0.9, density));
+            return 10f * volume * (1f - (float)Math.Pow(0.9, density));
         }
 
         // For multiple pellet types, density is computed from total number of pellets
@@ -60,50 +60,50 @@ namespace FromTheDepthsUtility
         //  Each fragment deals 100 kinetic damage at AP 6 regardless of main shell stats
         //  Above the maximum 60 pellets, the uncapped total damage is redistributed among 60 fragments
 
-        public static ShellDamage DamageTypes(double velocity, double volume, double hardner = 0, double highExplosive = 0, double EMP = 0, double fragments = 0)
+        public static ShellDamage DamageTypes(float velocity, float volume, float hardner = 0, float highExplosive = 0, float EMP = 0, float fragments = 0)
         {
             ShellDamage totalDamage = new ShellDamage(
-                velocity, 2.0 * volume * velocity,
-                3 + (velocity / 150.0)
+                velocity, 2f * volume * velocity,
+                3 + (velocity / 150f)
             );
 
-            double totalPellets = hardner + highExplosive + EMP + fragments;
-            double density = PackingDensity(totalPellets, volume);
-            double effectivePellets = EffectivePelletCount(volume, density);
+            float totalPellets = hardner + highExplosive + EMP + fragments;
+            float density = PackingDensity(totalPellets, volume);
+            float effectivePellets = EffectivePelletCount(volume, density);
 
-            double effectiveHardner = (hardner / totalPellets) * effectivePellets;
-            double effectiveHighExplosive = (highExplosive / totalPellets) * effectivePellets;
-            double effectiveEMP = (EMP / totalPellets) * effectivePellets;
-            double effectiveFrag = (fragments / totalPellets) * effectivePellets;
+            float effectiveHardner = (hardner / totalPellets) * effectivePellets;
+            float effectiveHighExplosive = (highExplosive / totalPellets) * effectivePellets;
+            float effectiveEMP = (EMP / totalPellets) * effectivePellets;
+            float effectiveFrag = (fragments / totalPellets) * effectivePellets;
 
-            totalDamage.Kinetic += 100.0 * effectiveHardner;
-            totalDamage.AP += 1.5 * effectiveHardner;
-            totalDamage.Explosive += 200.0 * effectiveHighExplosive;
-            totalDamage.EMP += effectiveEMP * (10.0 * volume);
+            totalDamage.Kinetic += 100f * effectiveHardner;
+            totalDamage.AP += 1.5f * effectiveHardner;
+            totalDamage.Explosive += 200f * effectiveHighExplosive;
+            totalDamage.EMP += effectiveEMP * (10f * volume);
             if (effectiveFrag > 0)
                 totalDamage.Fragmentation = new Fragments(effectiveFrag);
 
             return totalDamage;
         }
 
-        public static double ShellHealth(double diameter)
+        public static float ShellHealth(float diameter)
         {
-            return 300.0 * Math.PI * Math.Pow(diameter, 2.0);
+            return (float)(300f * Math.PI * Math.Pow(diameter, 2f));
         }
 
-        public static double MinimumReloadTime(double diameter)
+        public static float MinimumReloadTime(float diameter)
         {
-            return Math.Pow(diameter / 400.0, 1.5);
+            return (float)Math.Pow(diameter / 400f, 1.5);
         }
 
-        public static double NetReloadTime(double minReload, double ammoAutoLoaderConnections)
+        public static float NetReloadTime(float minReload, float ammoAutoLoaderConnections)
         {
-            return minReload * (1.0 * Math.Pow(10.0 / (1.0 + ammoAutoLoaderConnections), 0.5));
+            return minReload * (1f * (float)Math.Pow(10f / (1f + ammoAutoLoaderConnections), 0.5));
         }
 
-        public static double TraverseSpeed(double motorBarrels, double volume)
+        public static float TraverseSpeed(float motorBarrels, float volume)
         {
-            return 145.75 * ((motorBarrels + 1.0) / volume + 0.1);
+            return 145.75f * ((motorBarrels + 1f) / volume + 0.1f);
         }
     }
 }

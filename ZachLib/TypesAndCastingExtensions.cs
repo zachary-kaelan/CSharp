@@ -76,5 +76,39 @@ namespace ZachLib
                 return false;
             }
         }
+
+        private static readonly Type strType = typeof(string);
+        private static readonly Type intType = typeof(int);
+        private static readonly Type dblType = typeof(double);
+        private static readonly Type dateType = typeof(DateTime);
+        internal static object HandleConversion<T>(this object obj)
+        {
+            return obj.HandleConversion(typeof(T));
+        }
+
+        internal static object HandleConversion(this object obj, Type type)
+        {
+            if (type == strType)
+                return obj.ToString();
+            else if (type == intType)
+                return int.TryParse(obj.ToString(), out int num) ? num : 0;
+            else if (type == dateType)
+                return DateTime.TryParse(obj.ToString(), out DateTime date) ? date : new DateTime(0, 0, 0);
+            else if (type == dblType)
+                return double.TryParse(obj.ToString(), out double dbl) ? dbl : 0.0;
+            return obj;
+        }
+    }
+
+    public static class CommonTypes
+    {
+        public static readonly Type IntType = typeof(int);
+        public static readonly Type DblType = typeof(double);
+        public static readonly Type FltType = typeof(float);
+
+        public static readonly Type StrType = typeof(string);
+        public static readonly Type TSType = typeof(TimeSpan);
+        public static readonly Type DttType = typeof(DateTime);
+        public static readonly Type DtoType = typeof(DateTimeOffset);
     }
 }

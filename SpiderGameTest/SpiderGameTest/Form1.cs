@@ -25,7 +25,7 @@ namespace SpiderGameTest
         private void Form1_Load(object sender, EventArgs e)
         {
             gfx = this.CreateGraphics();
-            web = new Web(gfx, new PointF(gfx.DpiX / 2, gfx.DpiY / 2), new WebSpiral(gfx.DpiX, gfx.DpiY, penLength: 2));
+            web = new Web(gfx, new PointF(gfx.DpiX / 2, gfx.DpiY / 2), new WebSpiral(gfx.DpiX, gfx.DpiY, penLength: 2), 5);
         }
     }
 }

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using RestSharp;
 using PPLib;
+using ZachLib.Logging;
 
 namespace PPAPIOptimized
 {

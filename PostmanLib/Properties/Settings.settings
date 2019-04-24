@@ -8,5 +8,8 @@
     <Setting Name="expires_in" Type="System.DateTime" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="refresh_token" Type="System.String" Scope="User">
+      <Value Profile="(Default)">76c2d742-7fdc-3e1a-8011-9d7ac9d55997</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GamblingLib", "GamblingLib\GamblingLib.csproj", "{68B95281-C894-4DB5-AF49-899226BEC16B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{68B95281-C894-4DB5-AF49-899226BEC16B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68B95281-C894-4DB5-AF49-899226BEC16B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68B95281-C894-4DB5-AF49-899226BEC16B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68B95281-C894-4DB5-AF49-899226BEC16B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A2CCD341-B05B-42BA-85C8-4B4DBFFA6D8F}
+	EndGlobalSection
+EndGlobal

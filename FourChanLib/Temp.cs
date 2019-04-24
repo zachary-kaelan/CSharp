@@ -13,8 +13,8 @@ namespace FourChanLib
         public int ws_board { get; private set; }
         public int per_page { get; private set; }
         public int pages { get; private set; }
-        public long max_filesize { get; private set; }
-        public long max_webm_filesize { get; private set; }
+        public int max_filesize { get; private set; }
+        public int max_webm_filesize { get; private set; }
         public int max_comment_chars { get; private set; }
         public int max_webm_duration { get; private set; }
         public int bump_limit { get; private set; }
@@ -61,23 +61,32 @@ namespace FourChanLib
 
     internal interface IListedPostTemp
     {
-        long no { get; }
-        long last_modified { get; }
+        int no { get; }
+        int last_modified { get; }
     }
 
-    internal interface PostTemp : IListedPostTemp
+    internal interface AuthorTemp
     {
-        int since4pass { get; }
-        string now { get; }
-        long time { get; }
-        long resto { get; }
-
         string name { get; }
-        string com { get; }
         string capcode { get; } // For mods and such
+        int? since4pass { get; }
+        string id { get; }
+        string trip { get; }
+        string country { get; }
+        string country_name { get; }
     }
 
-    internal interface PostWithFileTemp : PostTemp
+    internal interface PostTemp : IListedPostTemp, AuthorTemp
+    {
+        string now { get; }
+        int time { get; }
+        int resto { get; }
+        string com { get; }
+
+        string subject { get; }
+    }
+
+    internal interface FileTemp
     {
         int filedeleted { get; }
         int spoiler { get; }
@@ -91,35 +100,115 @@ namespace FourChanLib
         int tn_h { get; }
         long tim { get; }
         string md5 { get; }
-        long fsize { get; }
+        int fsize { get; }
     }
-
-    internal interface ThreadTemp : PostWithFileTemp
+    
+    internal interface IPostWithFileTemp :PostTemp, FileTemp
     {
-        int sticky { get; }
-        int closed { get; }
-        int archived { get; }
-        int archived_on { get; }
 
-        int bumplimit { get; }
-        int imagelimit { get; }
-        string semantic_url { get; }
-        string tag { get; }
-
-        int replies { get; }
-        int images { get; }
-        int omitted_posts { get; }
-        int omitted_images { get; }
-        int unique_ips { get; }
-
-        string id { get; }
-        string trip { get; }
-        string country { get; }
-        string country_name { get; }
-        string subject { get; }
-        
-        Dictionary<string, IEnumerable<long>> capcode_replies { get; }
     }
 
+    public struct PostWithFileTemp : IPostWithFileTemp
+    {
+        public int filedeleted { get; }
+        public int spoiler { get; }
+        public int custom_spoiler { get; }
 
+        public string filename { get; }
+        public string ext { get; }
+        public int w { get; }
+        public int h { get; }
+        public int tn_w { get; }
+        public int tn_h { get; }
+        public long tim { get; }
+        public string md5 { get; }
+        public int fsize { get; }
+
+        public string now { get; }
+        public int time { get; }
+        public int resto { get; }
+        public string com { get; }
+
+        public string subject { get; }
+
+        public string name { get; }
+        public string capcode { get; } // For mods and such
+        public int? since4pass { get; }
+        public string id { get; }
+        public string trip { get; }
+        public string country { get; }
+        public string country_name
+        {
+            get;
+        }
+
+        public int no { get; }
+        public int last_modified { get; }
+    }
+
+    public struct ThreadTemp : IPostWithFileTemp
+    {
+        public int sticky { get; }
+        public int closed { get; }
+        public int archived { get; }
+        public int archived_on { get; }
+
+        public int bumplimit { get; }
+        public int imagelimit { get; }
+        public string semantic_url { get; }
+        public string tag { get; }
+
+        public int replies { get; }
+        public int images { get; }
+        public int omitted_posts { get; }
+        public int omitted_images { get; }
+        public int unique_ips { get; }
+        public int filedeleted { get; }
+        public int spoiler { get; }
+        public int custom_spoiler { get; }
+
+        public string filename { get; }
+        public string ext { get; }
+        public int w { get; }
+        public int h { get; }
+        public int tn_w { get; }
+        public int tn_h { get; }
+        public long tim { get; }
+        public string md5 { get; }
+        public int fsize { get; }
+
+        public string now { get; }
+        public int time { get; }
+        public int resto { get; }
+        public string com { get; }
+
+        public string subject { get; }
+
+        public string name { get; }
+        public string capcode { get; } // For mods and such
+        public int? since4pass { get; }
+        public string id { get; }
+        public string trip { get; }
+        public string country { get; }
+        public string country_name { get; }
+
+        public int no { get; }
+        public int last_modified { get; }
+
+        public Dictionary<string, int[]> capcode_replies { get; }
+
+        public PostWithFileTemp[] last_replies { get; }
+    }
+
+    internal struct CatalogPageTemp
+    {
+        public int page { get; set; }
+        public IEnumerable<ThreadTemp> threads { get; set; }
+    }
+
+    internal struct ThreadsPageTemp
+    {
+        public int page { get; set; }
+        public IEnumerable<IListedPostTemp> threads { get; set; }
+    }
 }

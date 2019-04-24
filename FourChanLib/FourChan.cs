@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using RestSharp;
 using RateLimiter;
 using Jil;
+using Newtonsoft.Json;
 
 namespace FourChanLib
 {
@@ -21,15 +22,50 @@ namespace FourChanLib
         internal static T MakeRequest<T>(string resource, Method method = Method.GET)
         {
             return rateLimit.Perform<T>(
-                () => JSON.Deserialize<T>(
-                    client.Execute(
+                () =>
+                {
+                    return JsonConvert.DeserializeObject<T>(
+                        client.Execute(
+                            new RestRequest(
+                                resource,
+                                method
+                            )
+                        ).Content
+                    );
+                }
+            ).Result;
+        }
+
+        internal static bool TryMakeRequest<T>(string resource, string ifModifiedSince, out T content, Method method = Method.GET)
+        {
+            IRestResponse response = rateLimit.Perform<IRestResponse>(
+                () =>
+                {
+                    return client.Execute(
                         new RestRequest(
                             resource,
                             method
+                        ).AddOrUpdateParameter(
+                            "If-Modified-Since",
+                            ifModifiedSince,
+                            ParameterType.HttpHeader
                         )
-                    ).Content
-                )
+                    );
+                }
             ).Result;
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
+            {
+                content = default(T);
+                return false;
+            }
+            else
+            {
+                content = JsonConvert.DeserializeObject<T>(
+                    response.Content
+                );
+                return true;
+            }
         }
 
         public static IEnumerable<Board> GetBoards()
@@ -42,7 +78,7 @@ namespace FourChanLib
             return boards;
         }
 
-        public static Dictionary<string, string> GetTrollFlags()
+        internal static Dictionary<string, string> GetTrollFlags()
         {
             if (troll_flags != null)
                 return troll_flags;

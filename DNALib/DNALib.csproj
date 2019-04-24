@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{F54D8D5B-8934-4A89-8477-C27D0C9EB9E7}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>DNALib</RootNamespace>
+    <AssemblyName>DNALib</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Redzen, Version=7.2.3.0, Culture=neutral, PublicKeyToken=182843a4be0a74f7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Redzen.7.2.3\lib\netstandard2.0\Redzen.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="GeneticAlgorithm\Gene.cs" />
+    <Compile Include="GeneticAlgorithm\CrossoverAlgorithms.cs" />
+    <Compile Include="GeneticAlgorithm\Evolution.cs" />
+    <Compile Include="GeneticAlgorithm\GenePool.cs" />
+    <Compile Include="GeneticAlgorithm\GenericNumberMethodTemplate.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>GenericNumberMethodTemplate.tt</DependentUpon>
+    </Compile>
+    <Compile Include="GeneticAlgorithm\Chromosome.cs" />
+    <Compile Include="GeneticAlgorithm\IChromosome.cs" />
+    <Compile Include="GeneticAlgorithm\GeneParameter.cs" />
+    <Compile Include="Helpers\EnumHelper.cs" />
+    <Compile Include="Models\AbstractCodonSequence.cs" />
+    <Compile Include="Models\AbstractReadingFrame.cs" />
+    <Compile Include="Models\CodonSequence.cs" />
+    <Compile Include="Models\Codon.cs" />
+    <Compile Include="Exceptions\UnexpectedAmbiguityException.cs" />
+    <Compile Include="Helpers\EncodingHelper.cs" />
+    <Compile Include="Models\BasePair.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="Models\ICodonSequence.cs" />
+    <Compile Include="Models\OpenReadingFrame.cs" />
+    <Compile Include="Models\ReadingFrame.cs" />
+    <Compile Include="Models\SequenceReader.cs" />
+    <Compile Include="Models\UnambiguousSequence.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Models\Sequence.cs" />
+    <Compile Include="SequenceMotifs\Motif.cs" />
+    <Compile Include="SequenceMotifs\MotifConstants.cs" />
+    <Compile Include="SequenceMotifs\MotifMatch.cs" />
+    <Compile Include="SequenceMotifs\MotifOp.cs" />
+    <Compile Include="SequenceMotifs\MotifRunner.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="GeneticAlgorithm\GenericNumberMethodTemplate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>GenericNumberMethodTemplate.cs</LastGenOutput>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

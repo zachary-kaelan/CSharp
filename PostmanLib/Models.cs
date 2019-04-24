@@ -5,10 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using PestPac.Model;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 using PPLib;
-using RGX.Utils;
 using ZachLib;
 
 namespace PostmanLib
@@ -20,6 +20,20 @@ namespace PostmanLib
         SA2,
         Unknown
     };
+
+    public struct LocationIDModel
+    {
+        public int LocationID { get; private set; }
+    }
+
+    public class InvoiceIDModel
+    {
+        public string InvoiceNumber { get; private set; }
+        public int InvoiceID { get; private set; }
+        public InvoiceListModel.InvoiceTypeEnum InvoiceType { get; private set; }
+
+        public InvoiceIDModel() { }
+    }
 
     public struct Customer
     {
@@ -246,17 +260,50 @@ namespace PostmanLib
         public double TaxRate { get; set; }
     }
 
-    public struct PatchOperation
+    public class PatchOperation
     {
         public string op;
         public string path;
-        public string value;
+        public object value;
 
-        public PatchOperation(string operation, string fieldPath, string newValue)
+        public PatchOperation(string operation, string fieldPath, object newValue)
         {
             op = operation;
             path = fieldPath;
             value = newValue;
         }
+    }
+
+    public struct PPList
+    {
+        public string ListId { get; set; }
+        public string Name { get; set; }
+        public string CreatedByUser { get; set; }
+        public ListVisibility Visibility { get; set; }
+        public string Type { get; set; }
+        public int[] LocationIds { get; set; }
+
+        public PPList(string name, ListVisibility visibility, bool isStatic = true) : this()
+        {
+            Name = name;
+            Visibility = visibility;
+            Type = isStatic ? "Static" : "Dynamic";
+        }
+
+        public PPList(string name, ListVisibility visibility, int[] locationIds, bool isStatic = true) : this()
+        {
+            Name = name;
+            Visibility = visibility;
+            LocationIds = locationIds;
+            Type = isStatic ? "Static" : "Dynamic";
+            CreatedByUser = "ZAC.JOHNSO";
+        }
+    }
+
+    public struct PPPostedServiceOrder
+    {
+        public bool Posted { get; set; }
+        public int BatchNumber { get; set; }
+        public string TechnicianCode { get; set; }
     }
 }

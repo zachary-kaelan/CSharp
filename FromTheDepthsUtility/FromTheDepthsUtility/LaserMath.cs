@@ -8,7 +8,7 @@ namespace FromTheDepthsUtility
 {
     public static class LaserMath
     {
-        public readonly static Dictionary<double, QSwitchInfo> QSwitches = new Dictionary<double, QSwitchInfo>()
+        public readonly static Dictionary<float, QSwitchInfo> QSwitches = new Dictionary<float, QSwitchInfo>()
         {
             {0, new QSwitchInfo(40, 0.01, 1, 0.14) },
             {1, new QSwitchInfo(1, 0.2, 2, 5.65) },
@@ -23,7 +23,7 @@ namespace FromTheDepthsUtility
         // Laser Destabilizer causes the line its a part of to discharge 80% more energy at a time.
         //      Each Laser Destabilizer is 80% as effective as the last
         // Frequency Doublers increase laser AP by 1.
-        //      Laser range is multiplied by sqrt(1.0 + # of frequency doublers)
+        //      Laser range is multiplied by sqrt(1f + # of frequency doublers)
 
         // At base, 20% of stored energy is discharged per second
         // Base range is 5.65m per daamage; final is capped at 10km
@@ -32,13 +32,13 @@ namespace FromTheDepthsUtility
         // Q = amount of Q-Switches
         // P = most efficient length of laser cavities within L
 
-        public static double DamagePerSecond(double destabilizers, double cavities, double qswitches)
+        public static float DamagePerSecond(float destabilizers, float cavities, float qswitches)
         {
-            double premax = 40.0 * (
-                (cavities / 2.0) + 
+            float premax = 40f * (
+                (cavities / 2f) + 
                 Enumerable.Range(
                     1, Convert.ToInt32(destabilizers)
-                ).Sum(n => (cavities / 2.0) * Math.Pow(0.8, Convert.ToDouble(n)))
+                ).Sum(n => (cavities / 2f) * Math.Pow(0.8, (float)Convert.ToDouble(n)))
             );
 
             return Math.Max(premax, Math.Pow(qswitches, 0.5) * premax);
@@ -46,27 +46,27 @@ namespace FromTheDepthsUtility
 
         // Field of fire is 15 degrees per Laser Steering Optics, up to a max of 90 with 6.
 
-        public static double Inaccuracy(double SteeringOptics, double Optics)
+        public static float Inaccuracy(float SteeringOptics, float Optics)
         {
-            return 10.0 / (SteeringOptics + Optics);
+            return 10f / (SteeringOptics + Optics);
         }
 
         // Optics are unusable with Laser Missile Defense
         // Inaccuracy of 0.5 degrees, single-block accuracy out to about 115m
         
-        public static double AbsorbtionMultiplier(double air, double water, double smoke)
+        public static float AbsorbtionMultiplier(float air, float water, float smoke)
         {
             // air in meters, water in meters, smoke in layers
-            //return Math.Pow(Math.E, -1.0 * ((0.0003 * air) + (0.01 * water))) * Math.Pow(0.1, smoke);
-            return Math.Pow(Math.E, -1.0 * ((0.0003 * air) + (0.01 * water) + (2.3 * smoke)));
+            //return Math.Pow(Math.E, -1f * ((0.0003 * air) + (0.01 * water))) * Math.Pow(0.1, smoke);
+            return Math.Pow(Math.E, -1f * ((0.0003 * air) + (0.01 * water) + (2.3 * smoke)));
         }
 
         // Sustained damage is limited by energy going into the laser and energy coming out
         // Energy going in, assuming sufficient power, is 50 tmes the number of Laser Pumps
         // Max energy discharged per second is determined by the number of Cavities and Destabilizers
-        public static double MaxEnergyPerSecond(double cavities, double destabilizers)
+        public static float MaxEnergyPerSecond(float cavities, float destabilizers)
         {
-            return 200.0 * cavities * (1.0 - Math.Pow(0.8, destabilizers + 1.0));
+            return 200f * cavities * (1f - Math.Pow(0.8, destabilizers + 1f));
         }
 
         // Missiles have 100 HP and 1 AP
@@ -75,12 +75,12 @@ namespace FromTheDepthsUtility
 
     public struct QSwitchInfo
     {
-        public double PulsesPerSecond { get; set; }
-        public double DrainPerPulse { get; set; }
-        public double DamagePerEnergy { get; set; }
-        public double RangePerEnergy { get; set; }
+        public float PulsesPerSecond { get; set; }
+        public float DrainPerPulse { get; set; }
+        public float DamagePerEnergy { get; set; }
+        public float RangePerEnergy { get; set; }
 
-        public QSwitchInfo(double pulses, double drain, double damage, double range)
+        public QSwitchInfo(float pulses, float drain, float damage, float range)
         {
             PulsesPerSecond = pulses;
             DrainPerPulse = drain;

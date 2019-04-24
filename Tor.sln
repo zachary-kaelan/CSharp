@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.136
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tor", "Tor\Tor.csproj", "{8EECD857-F347-4102-97D3-62A88F4FA23C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{8EECD857-F347-4102-97D3-62A88F4FA23C}.Release|x86.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {54BD21EC-99F5-46AF-8E77-041DF49EE855}
+	EndGlobalSection
+EndGlobal

@@ -58,6 +58,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\PPLib\PPLib\bin\Debug\PPLib.dll</HintPath>
     </Reference>
+    <Reference Include="PPRGX">
+      <HintPath>..\..\PPRegex\bin\Debug\PPRGX.dll</HintPath>
+    </Reference>
     <Reference Include="RegexLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\Source\Repos\PestPacCompilation\PestPacCompilation\bin\Debug\RegexLib.dll</HintPath>
@@ -94,6 +97,9 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="ZachLib">
+      <HintPath>..\..\ZachLib\bin\Debug\ZachLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Client.cs" />

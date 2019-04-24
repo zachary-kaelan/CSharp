@@ -1,0 +1,30 @@
+﻿<#@ template language="C#" #>
+<#@ output extension=".cs" #>
+<#@ assembly name="System.Core" #>
+
+<# Type[] types = new[] {
+    typeof(byte), typeof(UInt16), typeof(UInt32), typeof(UInt64)
+    };
+#>
+
+using System;
+
+namespace DNALib.GeneticAlgorithm
+{
+	<# foreach (var type in types) { #>
+		public class <#= type.Name #>Chromosome
+		{
+			private byte Length { get; set; }
+			public <#= type.Name #> Value { get; private set; }
+			private byte[] Bytes { get; set; }
+
+			public <#= type.Name #>Chromosome(<#= type.Name #> value, byte length)
+			{
+				Value = value;
+				Bytes = BitConverter.GetBytes(value);
+				Length = length;
+			}
+		}
+	<#
+	} #>
+}

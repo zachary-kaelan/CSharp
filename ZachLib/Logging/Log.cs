@@ -26,6 +26,7 @@ namespace ZachLib.Logging
 
     public class Log : IDictionary<EntryType, Func<LogUpdate, string>>, IDisposable
     {
+        public static FileMode LogFileMode = FileMode.Create;
         private const string FILE_DIVISOR = "\r\n\r\n\t\t~~~\t\t\r\n\r\n";
         private static readonly string TODAY = DateTime.Now.ToString("MM.dd.yyyy") + ".txt";
 
@@ -33,21 +34,37 @@ namespace ZachLib.Logging
         public string TimeFormat { get; set; }
         public FormattingType Formatting { get; set; }
         public LogType Type { get; set; }
-        public bool LogFileEntries { get; private set; }
+        public bool LogFileEntries { get; set; }
         private Dictionary<EntryType, Func<LogUpdate, string>> EntryFormatters { get; set; }
 
         private bool isInitialized { get; set; }
         public string Path { get; private set; }
         public string DataPath { get; private set; }
         public string Name { get; private set; }
-        private StreamWriter LogStream { get; set; }
+        internal StreamWriter LogStream { get; private set; }
+        private FileStream LogFile { get; set; }
 
         public Func<LogUpdate, string> FormatEntry { get; private set; }
-        public string this[LogUpdate update] { get => Formatting == FormattingType.Single ? FormatEntry(update) : EntryFormatters[update.Type](update); }
+        public string this[LogUpdate update] {
+            get => Formatting != FormattingType.Multiple ? 
+                FormatEntry(update) : 
+                EntryFormatters[update.Type](update); }
+
+        private object _logLock = new object();
+
         public bool TryLogEntry(string entry)
         {
-            if ((Type == LogType.SingleFile || Type == LogType.SingleFileNonLog || Type == LogType.FolderFilesByDate) && !String.IsNullOrWhiteSpace(entry))
-                LogStream.TryWriteLineAsync(entry);
+            if ((Type == LogType.SingleFile ||
+                    Type == LogType.SingleFileNonLog ||
+                    Type == LogType.FolderFilesByDate
+                ) && !String.IsNullOrWhiteSpace(entry))
+            {
+                lock (_logLock)
+                {
+                    LogStream.TryWriteLineAsync(entry);
+                    LogStream.Flush();
+                }
+            }
             else
                 return false;
             return true;
@@ -77,7 +94,12 @@ namespace ZachLib.Logging
             EntryFormatters.Add(singleType, format);
         }
 
-        public Log(LogType type, EntryType singleType, Func<LogUpdate, string> format = null, bool logFileEntries = true) : this(type, singleType.ToString(), singleType, format)
+        public Log(LogType type, EntryType singleType, bool logFileEntries = true, Func<LogUpdate, string> format = null) : this(type, singleType.ToString(), singleType, format)
+        {
+            LogFileEntries = logFileEntries;
+        }
+
+        public Log(LogType type, string name, EntryType singleType, bool logFileEntries = true, Func<LogUpdate, string> format = null) : this(type, name, singleType, format)
         {
             LogFileEntries = logFileEntries;
         }
@@ -141,9 +163,13 @@ namespace ZachLib.Logging
             if (Type == LogType.SingleFile || Type == LogType.SingleFileNonLog)
             {
                 Path += ".txt";
-                LogStream = new StreamWriter(Path, true);
-                if (Type == LogType.SingleFile)
-                    LogStream.NewLine = FILE_DIVISOR;
+                lock(_logLock)
+                {
+                    LogFile = new FileStream(Path, LogFileMode, FileAccess.Write, FileShare.ReadWrite);
+                    LogStream = new StreamWriter(LogFile);
+                    if (Type == LogType.SingleFile)
+                        LogStream.NewLine = FILE_DIVISOR;
+                }
             }
             else
             {
@@ -157,7 +183,11 @@ namespace ZachLib.Logging
                 if (Type == LogType.FolderFilesByDate)
                 {
                     Path += TODAY;
-                    LogStream = new StreamWriter(Path, true);
+                    lock (_logLock)
+                    {
+                        LogFile = new FileStream(Path, LogFileMode, FileAccess.Write, FileShare.ReadWrite);
+                        LogStream = new StreamWriter(LogFile);
+                    }
                 }
             }
         }
@@ -248,11 +278,15 @@ namespace ZachLib.Logging
 
                 EntryFormatters.Clear();
                 EntryFormatters = null;
-                if (LogStream != null)
+
+                lock(_logLock)
                 {
-                    LogStream.Flush();
-                    LogStream.Close();
-                    LogStream = null;
+                    if (LogStream != null)
+                    {
+                        LogStream.Flush();
+                        LogStream.Close();
+                        LogStream = null;
+                    }
                 }
 
                 disposedValue = true;

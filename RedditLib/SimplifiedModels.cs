@@ -3,131 +3,36 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime;
 using System.Text;
 using System.Threading.Tasks;
 
 using RedditSharp.Things;
+using ZachLib;
+
 
 namespace RedditLib
 {
-    /*public struct FinalRatings
-    {
-        public SortedDictionary<Season, double> Seasons { get; set; }
-        public SortedDictionary<Month, double> Months { get; set; }
-        public SortedDictionary<DayOfWeek, double> Days { get; set; }
-        public SortedDictionary<int, double> Hours { get; set; }
-        
-        public SortedDictionary<Season, int> ActualBySeason { get; set; }
-        public SortedDictionary<Month, int> ActualByMonth { get; set; }
-        public SortedDictionary<DayOfWeek, int> ActualByDay { get; set; }
-        public SortedDictionary<int, int> ActualByHour { get; set; }
-
-        public IRedditThingRating ImportanceRatioScale { get; set; }
-
-        public FinalRatings(IEnumerable<RedditThing> posts) : this()
-        {
-            var ImportanceRatioScale = posts.Select(p => new RedditThingRating(p)).SumRatings();
-            double multiplier = Math.Pow(ImportanceRatioScale.Gold * ImportanceRatioScale.Replies * ImportanceRatioScale.Score, 1.0 / 3.0);
-            ImportanceRatioScale = (IRedditThingRating)new RedditThingRating()
-            {
-                Gold = multiplier / ImportanceRatioScale.Gold,
-                Score = multiplier / ImportanceRatioScale.Score,
-                Replies = multiplier / ImportanceRatioScale.Replies
-            };
-            TotalsByTimePeriod(posts);
-            FinalizeTimePeriods(posts);
-        }
-
-        public void TotalsByTimePeriod(IEnumerable<RedditThing> posts)
-        {
-            var byDayByHour = new SortedDictionary<DayOfWeek, SortedDictionary<int, int>>(
-                posts.GroupBy(
-                    p => p.DateTime.DayOfWeek
-                ).ToDictionary(
-                    g => g.Key,
-                    g => g.GroupBy(
-                        p => Math.Round(p.DateTime.TimeOfDay.TotalHours),
-                        p => p
-                    )
-                )
-            );
-
-            ActualByHour = new SortedDictionary<int, int>(
-                posts.GroupBy(
-                    p => Math.Round(p.DateTime.TimeOfDay.TotalHours),
-                    p => 0
-                ).ToDictionary(
-                    g => Convert.ToInt32(g.Key),
-                    g => g.Count()
-                )
-            );
-            
-            ActualByDay = new SortedDictionary<DayOfWeek, int>(
-                posts.GroupBy(
-                    p => p.DateTime.DayOfWeek,
-                    p => 0
-                ).ToDictionary(
-                    g => g.Key,
-                    g => g.Count()
-                )
-            );
-            
-            ActualByMonth = new SortedDictionary<Month, int>(
-                posts.GroupBy(
-                    p => p.Date.Month,
-                    p => 0
-                ).ToDictionary(
-                    g => (Month)g.Key,
-                    g => g.Count()
-                )
-            );
-            
-            ActualBySeason = new SortedDictionary<Season, int>(
-                posts.GroupBy(
-                    p => p.Date.GetSeason(),
-                    (k, values) => new KeyValuePair<Season, int>(k, values.Count())
-                ).ToDictionary(
-                    kv => kv.Key,
-                    kv => kv.Value
-                )
-            );
-        }
-
-        public void FinalizeTimePeriods(IEnumerable<RedditThing> posts)
-        {
-            IGrouping<string, RedditThing>[] postGroups = posts.GroupBy(p => p.Date.ToString()).ToArray();
-            posts = null;
-
-            var postsRankedByHour = postGroups.RankByHour();
-            postsRankedByHour.NormalizeAll();
-            Hours = postsRankedByHour.SelectMany(d => d.Value).ReNormalize();
-            postsRankedByHour = null;
-
-            var postsRankedByDay = postGroups.RankByDay();
-            postsRankedByDay.NormalizeAll();
-            Days = postsRankedByDay.SelectMany(d => d.Value).ReNormalize();
-            postsRankedByDay = null;
-
-            var postsRankedByMonth = postGroups.RankByMonth();
-            postsRankedByMonth.NormalizeAll();
-            Months = postsRankedByMonth.SelectMany(d => d.Value).ReNormalize();
-            postsRankedByMonth = null;
-
-            var postsRankedBySeason = postGroups.RankBySeason();
-            postsRankedBySeason.NormalizeAll();
-            Seasons = postsRankedBySeason.SelectMany(d => d.Value).ReNormalize();
-            postsRankedBySeason = null;
-        }
-    }*/
-
     public struct Ratings
     {
         //public SortedDictionary<int, int> ScoreByHour { get; set; }
         public SortedDictionary<DayOfWeek, SortedDictionary<int, double>> ScoreByHourByDay { get; set; }
+        public SortedDictionary<DayOfWeek, double> ScoreByDay { get; set; }
+        public Dictionary<KeyValuePair<DayOfWeek, int>, double> ScoreByHourAndDay { get; set; }
+
+        public List<KeyValuePair<string, long>> Timings { get; set; }
+        private Stopwatch timer { get; set; }
 
         public Ratings(IEnumerable<RedditThing> posts)
         {
+            //var pllPosts = posts.AsParallel();
+
+            double sum = 0;
+            Timings = new List<KeyValuePair<string, long>>();
+            timer = new Stopwatch();
+            timer.Start();
+
             var ratingsTemp = posts.Select(
                 p => new KeyValuePair<DateTime, RedditThingRating>(
                     p.DateTime,
@@ -136,66 +41,160 @@ namespace RedditLib
             );
             posts = null;
 
+            timer.Stop();
+            Timings.Add(new KeyValuePair<string, long>("CreateRedditThingRatings", timer.ElapsedMilliseconds));
+            timer.Restart();
+
             var ImportanceRatioScale = ratingsTemp.Select(kv => kv.Value).SumRatings();
             double multiplier = Math.Pow(ImportanceRatioScale.Gold * ImportanceRatioScale.Replies * ImportanceRatioScale.Score, 1.0 / 3.0);
-            ImportanceRatioScale = (IRedditThingRating)new RedditThingRating()
+            RedditThingRating.Multipliers = new RedditThingRating()
             {
                 Gold = multiplier / ImportanceRatioScale.Gold,
                 Score = multiplier / ImportanceRatioScale.Score,
                 Replies = multiplier / ImportanceRatioScale.Replies
             };
 
-            var ratings = ratingsTemp.Select(
+            timer.Stop();
+            Timings.Add(new KeyValuePair<string, long>("SumRatingsGetMultiplier", timer.ElapsedMilliseconds));
+            timer.Restart();
+
+            /*var ratings = ratingsTemp.Select(
                 r => new KeyValuePair<DateTime, double>(
                     r.Key, r.Value.GetWeightedTotal()
                 )
             ).GroupBy(
-                r => r.Key.Date
+                r => r.Key.DayOfYear
             ).SelectMany(
                 g =>
                 {
-                    double sum = g.Sum(r => r.Value);
+                    double temp = g.Sum(r => r.Value);
                     return g.Select(
                         r => new KeyValuePair<DateTime, double>(
-                            r.Key, r.Value / sum
+                            r.Key, r.Value / temp
                         )
                     );
                 }
-            );
-            ratingsTemp = null;
-
-            ScoreByHourByDay = new SortedDictionary<DayOfWeek, SortedDictionary<int, double>>(
-                ratings.GroupBy(
-                    r => r.Key.DayOfWeek
-                ).ToDictionary(
-                    g => g.Key,
-                    g => new SortedDictionary<int, double>(
-                        g.GroupBy(
-                            r => Math.Round(r.Key.TimeOfDay.TotalHours),
-                            r => r.Value
-                        ).ToDictionary(
-                            h => Convert.ToInt32(h.Key),
-                            h => h.Average()
+            );*/
+            var ratings = ratingsTemp.Select(
+                r => new KeyValuePair<KeyValuePair<DayOfWeek, int>, double>(
+                    new KeyValuePair<DayOfWeek, int>(
+                        r.Key.DayOfWeek, 
+                        Convert.ToInt32(
+                            Math.Round(
+                                r.Key.TimeOfDay.TotalHours
+                            )
                         )
-                    )
+                    ), r.Value.GetWeightedTotal()
                 )
             );
+
+            timer.Stop();
+            ratingsTemp = null;
+            Timings.Add(new KeyValuePair<string, long>("NormalizeByDate", timer.ElapsedMilliseconds));
+            timer.Restart();
+
+            sum = ratings.Sum(kv => kv.Value);
+
+            timer.Stop();
+            Timings.Add(new KeyValuePair<string, long>("GetNormalizedSum", timer.ElapsedMilliseconds));
+            timer.Restart();
+
+            ScoreByHourAndDay = ratings.GroupBy(
+                r => r.Key, 
+                r => r.Value,
+                (k, g) => new KeyValuePair<KeyValuePair<DayOfWeek, int>, double>(k, g.Sum() / sum)
+            ).ToDictionary();
+
+            timer.Stop();
+            Timings.Add(new KeyValuePair<string, long>("ScoreByHourAndDay", timer.ElapsedMilliseconds));
+            timer.Restart();
+
+            var byDay = ratings.GroupBy(
+                r => r.Key.Key,
+                r => new KeyValuePair<int, double>(r.Key.Value, r.Value)
+            );
+            ratings = null;
+            ScoreByDay = new SortedDictionary<DayOfWeek, double>(
+                byDay.GroupBy(
+                    g => g.Key,
+                    r => r.Sum(p => p.Value),
+                    (k, g) => new KeyValuePair<DayOfWeek, double>(k, g.Sum())
+                ).ToDictionary()
+            );
+
+            timer.Stop();
+            Timings.Add(new KeyValuePair<string, long>("ScoreByDay", timer.ElapsedMilliseconds));
+            timer.Restart();
+
+            ScoreByHourByDay = new SortedDictionary<DayOfWeek, SortedDictionary<int, double>>(
+                byDay.GroupBy(
+                    g => g.Key,
+                    g => g.AsEnumerable(), 
+                    (k, g) => new KeyValuePair<DayOfWeek, SortedDictionary<int, double>>(
+                        k, new SortedDictionary<int, double>(
+                            g.SelectMany(r => r).GroupBy(
+                                r => r.Key,
+                                r => r.Value,
+                                (k2, g2) => new KeyValuePair<int, double>(
+                                    k2, g2.Sum() / sum
+                                )
+                            ).ToDictionary()
+                        )
+                    )
+                ).ToDictionary()
+            );
+
+            timer.Stop();
+            Timings.Add(new KeyValuePair<string, long>("ScoreByHourByDay", timer.ElapsedMilliseconds));
+
             ratings = null;
         }
 
+        private const string DAY_FORMAT = " ~ {0} ~ : {1}\r\n{2}";
         public override string ToString()
         {
-            return String.Join(
-                "\r\n",
-                ScoreByHourByDay.Select(
-                    d => " ~ " + d.Key.ToString() + " ~ \r\n" + String.Join(
-                        "\r\n",
-                        d.Value.OrderByDescending(h => h.Value).Select(
-                            h => "\t" + h.Key.ToString() + " - " + h.Value.ToString()
+            timer.Restart();
+            var temp = ScoreByDay;
+            string str = 
+                "~ ------------------- ~\r\n" +
+                "~ --- BY HOUR/DAY --- ~\r\n" +
+                "~ ------------------- ~\r\n" +
+                String.Join(
+                    "\r\n",
+                    ScoreByHourByDay.Select(
+                        d => new KeyValuePair<KeyValuePair<DayOfWeek, double>, SortedDictionary<int, double>>(
+                            new KeyValuePair<DayOfWeek, double>(
+                                d.Key, temp[d.Key]
+                            ), d.Value
+                        )
+                    ).OrderByDescending(d => d.Key.Value).Take(5).Select(
+                        d => String.Format(
+                            DAY_FORMAT,
+                            d.Key.Key,
+                            d.Key.Value,
+                            String.Join(
+                                "\r\n",
+                                d.Value.OrderByDescending(h => h.Value).Take(3).Select(
+                                    h => "\t" + h.Key.ToString() + " - " + h.Value.ToString("#.000")
+                                )
+                            )
                         )
                     )
-                )
-            );
+                ) +
+                "\r\n\r\n" +
+                "~ ----------------------- ~\r\n" +
+                "~ --- BY HOUR AND DAY --- ~\r\n" +
+                "~ ----------------------- ~\r\n" +
+                String.Join(
+                    "\r\n",
+                    ScoreByHourAndDay.OrderByDescending(kv => kv.Value).Take(15).Select(
+                        kv => kv.Key.Key.ToString() + "\t - \t" + kv.Key.Value.ToString() + ": \t" + kv.Value.ToString("#.000")
+                    )
+                );
+            timer.Stop();
+            temp = null;
+            Timings.Add(new KeyValuePair<string, long>("ToString", timer.ElapsedMilliseconds));
+            return str;
         }
     }
 
@@ -221,8 +220,7 @@ namespace RedditLib
             LoadPost(post);
             NumComments = post.CommentCount;
             if (!discardReplies)
-                Comments = post.Comments.Select(c => new RedditThing(c, discardSubreplies));
-
+                Comments = post.ListComments(100).Select(c => new RedditThing(c, discardSubreplies));
             /*if (!discardReplies || !discardSubreplies)
             {
                 long baseMemory = GC.GetTotalMemory(false);

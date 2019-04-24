@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -18,14 +21,26 @@ namespace ZachRegex
             TimeSpan ts100 = TimeSpan.FromMilliseconds(100);
             TimeSpan ts250 = TimeSpan.FromMilliseconds(250);
 
+            //string guid = "d60a793c-365b-4d4a-96a7-81b21e81d015";
+            AssemblyName name = new AssemblyName("ZachRGX, Version=1.0.0.0, Culture=neutral, PublicKeyToken=41ff425b50d3cee4");
+            name.KeyPair = new StrongNameKeyPair(File.OpenRead(@"C:\Users\ZACH-GAMING\Source\StrongKeys\ZachRGX.snk"));
+
+            Type attribute = typeof(PrimaryInteropAssemblyAttribute);
+            Type intType = typeof(int);
+            Type attribute2 = typeof(GuidAttribute);
+            Type attribute3 = typeof(ImportedFromTypeLibAttribute);
+
             Regex.CompileToAssembly(
                 new RegexCompilationInfo[] {
                     new RegexCompilationInfo(@"^\(?(\d{3})[\) -]*(\d{3})-?(\d{4})", RegexOptions.None, "Phone", "RGX.UTILS", true, ts10),
                     new RegexCompilationInfo(@"(\d+)[^\d\\]*\.pdf$", RegexOptions.RightToLeft, "FileDigit", "RGX.UTILS", true, ts10),
                     new RegexCompilationInfo("^\"?(.+) :=: ([^\"]+)", RegexOptions.Multiline, "FileDictionary", "RGX.UTILS", true, ts250),
                     new RegexCompilationInfo(@"\[\[([^\]]+)\]\]", RegexOptions.None, "SecondaryFormatting", "RGX.UTILS", true, ts50),
-                    new RegexCompilationInfo(@"[^A-Za-z0-9_]", RegexOptions.None, "Symbols", "RGX.UTILS", true, ts25),
-                    new RegexCompilationInfo(@"[~#%&*{}\:<>?/+|" + "\"" + @"]|(?:^[._]*)|(?:\.$)|(?:\.{2,})", RegexOptions.None, "MakeFilenameFriendly", "RGX.UTILS", true, ts25),
+                    new RegexCompilationInfo(@"[^A-Za-z0-9_]", RegexOptions.CultureInvariant, "Symbols", "RGX.UTILS", true, ts25),
+                    new RegexCompilationInfo(@"[^A-Za-z0-9]", RegexOptions.CultureInvariant, "NonAlphaNumeric", "RGX.UTILS", true, ts25),
+                    new RegexCompilationInfo(@"[\r\n\t~#%&*{}\:<>?/+|" + "\"" + @"]|(?:^[._]*)|(?:\.$)|(?:\.{2,})", RegexOptions.None, "MakeFilenameFriendly", "RGX.UTILS", true, ts25),
+                    new RegexCompilationInfo(@">([^<\r\n]+)<", RegexOptions.RightToLeft, "XmlValue", "RGX.UTILS", true, ts10),
+                    new RegexCompilationInfo(@"^\s*<(?<Key>[^>]+)>(?<Value>[^<\r\n]+)<\/", RegexOptions.Multiline, "XmlKeyValue", "RGX.UTILS", true, ts25),
 
                     //--------------------------------//
                     //------------- HTML -------------//
@@ -63,6 +78,14 @@ namespace ZachRegex
                     new RegexCompilationInfo(@"^\s*<h6[^>]*>\n?(?(?=<)<[^>]+>)*(?<Header>[^<]+)(?:\s*<\/h6>\s*)?", RegexOptions.Multiline, "Header6", "RGX.HTML.HEADERS", true, ts100),
                         // Header
 
+                    //-----------------------------------//
+                    //------------- REDDIT --------------//
+                    //-----------------------------------//
+
+                    new RegexCompilationInfo(@">\s*\/?r\/?thathappened", RegexOptions.IgnoreCase, "CheckQuote1", "RGX.Reddit.LFS", true, ts25),
+                    new RegexCompilationInfo("\"" + @".*\/?r\/?thathappened.*" + "\"", RegexOptions.IgnoreCase, "CheckQuote2", "RGX.Reddit.LFS", true, ts25),
+                    new RegexCompilationInfo(@"\/r\/thathappened.*\/s", RegexOptions.Singleline | RegexOptions.IgnoreCase, "CheckSarcasm", "RGX.Reddit", true, ts25),
+
                     //---------------------------------//
                     //------------ EXAMINE ------------//
                     //---------------------------------//
@@ -97,14 +120,28 @@ namespace ZachRegex
                     //----------- MUSIC ---------//
                     //---------------------------//
 
-                    new RegexCompilationInfo(@"\/(?<Param1>[^-]+) ?(?<Type>-|by|:) ?(?<Param2>)\.[a-z3]{1,4}$", RegexOptions.RightToLeft, "Filename", "RGX.MUSIC", true, ts100),
+                    new RegexCompilationInfo(@"\/(?<Param1>[^-]+) ?(?<Type>-|by|:) ?(?<Param2>[^.(]+) ?(?:\((?<Param3>[^).]*)\))? ?\.[a-z3]{1,4}$", RegexOptions.RightToLeft, "Filename", "RGX.MUSIC", true, ts100),
 
                     //---------------------------//
                     //----------- STEAM ---------//
                     //---------------------------//
 
                     new RegexCompilationInfo(@"^\s{12}[^" + "\"]+\"app_tag\">(?<Tag>[^<]+)", RegexOptions.Multiline, "AppTags", "RGX.STEAM", true, ts100),
-                }, new AssemblyName("ZachRGX, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null")
+                }, name/*,
+                new CustomAttributeBuilder[] {
+                    new CustomAttributeBuilder(
+                        attribute3.GetConstructor(new Type[] { typeof(string) }),
+                        new object[] { @"C:\Users\ZACH-GAMING\Documents\Visual Studio 2017\Projects\ZachRegex\bin\Debug\ZachRGX.dll" }
+                    )
+                    new CustomAttributeBuilder(
+                        attribute.GetConstructor(
+                            new Type[] { intType, intType }
+                        ), new object[] { 1, 0 }
+                    ), new CustomAttributeBuilder(
+                        attribute2.GetConstructor(new Type[] { typeof(string) }),
+                        new object[] { guid }
+                    )
+                }*/
             );
         }
     }

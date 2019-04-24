@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2048
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PressingMatters", "PressingMatters\PressingMatters.csproj", "{AEA1E49B-BA05-409D-A0B5-1F8C464FBC29}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AEA1E49B-BA05-409D-A0B5-1F8C464FBC29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEA1E49B-BA05-409D-A0B5-1F8C464FBC29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEA1E49B-BA05-409D-A0B5-1F8C464FBC29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEA1E49B-BA05-409D-A0B5-1F8C464FBC29}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C2CE09B1-9210-4875-BDDB-455A325971C7}
+	EndGlobalSection
+EndGlobal

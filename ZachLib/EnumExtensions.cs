@@ -10,7 +10,7 @@ namespace ZachLib
 {
     public static class EnumExtensions
     {
-        private static void CheckIsEnum<T>(bool withFlags) where T : struct, IConvertible
+        internal static void CheckIsEnum<T>(bool withFlags) where T : struct, IConvertible
         {
             if (!typeof(T).IsEnum)
                 throw new ArgumentException(string.Format("Type '{0}' is not an enum", typeof(T).FullName));

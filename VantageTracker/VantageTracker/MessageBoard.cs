@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using RestSharp;
 using Newtonsoft.Json;
 using PPLib;
+using ZachLib;
+using PPRGX;
 
 namespace VantageTracker
 {
@@ -59,7 +61,7 @@ namespace VantageTracker
         {
             while(true)
             {
-                var matches = request.GetMatches(PPRGX.MSG_BOARD)
+                var matches = request.GetMatches(MSG_BOARD)
                     .Select(m => new NotificationEventArgs(m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value, m.Groups[4].Value))
                     .ToList().FindAll(n => !downloaded.Contains(n.dataID)).ToArray();
 

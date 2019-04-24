@@ -8,6 +8,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using DatamuseLib;
+using DatamuseLib.Models;
+using DatamuseLib.Models.Songs;
+using ParodyWriter.Properties;
 using ZachLib;
 
 namespace ParodyWriter
@@ -19,36 +23,18 @@ namespace ParodyWriter
             InitializeComponent();
         }
 
+        public static string PATH_MAIN { get; set; }
+
         private void Form1_Load(object sender, EventArgs e)
         {
-            var lines = File.ReadAllLines(@"H:\Notes\Zach\Parodies\Temp.txt");
-            var wordCounts = File.ReadAllText(
-                @"H:\Notes\Zach\Parodies\Temp.txt"
-            ).ToLower().Split(
-                new char[] { '\r', '\n', ' ', '\t' },
-                StringSplitOptions.RemoveEmptyEntries
-            ).GroupBy(w => w).Where(
-                w => w.Key
-            ).ToDictionary(
-                g => g.Key, 
-                g => g.Count()
-            );
-
-            var countsList = wordCounts.ToList().OrderByDescending(w => w.Value);
-            int grandTotal = countsList.Sum(l => l.Value);
-            var percentagesList = countsList.Select(
-                kv => new KeyValuePair<string, double>(
-                    kv.Key, 
-                    (double)kv.Value / grandTotal
-                )
-            ).Select(
-                w => new KeyValuePair<string, string>(
-                    w.Key, 
-                    w.Value.ToString("##.00")
-                )
-            );
-            
-            
+            if (String.IsNullOrWhiteSpace(Settings.Default.TempPath))
+            {
+                PATH_MAIN = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Appdata\Local\Temp\";
+                Settings.Default.TempPath = PATH_MAIN;
+                Settings.Default.Save();
+            }
+            else
+                PATH_MAIN = Settings.Default.TempPath;
         }
     }
 }
