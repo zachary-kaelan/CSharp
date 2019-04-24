@@ -100,11 +100,11 @@ namespace PPWebLib
             _insecure.RemoveDefaultParameter("Accept");
             _insecure.AddDefaultHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
             cookies.Add(new Cookie("Username", "%7BMGIGCSsGAQQBgjdYA6BVMFMGCisGAQQBgjdYAwGgRTBDAgMCAAACAmYDAgIAwAQI%0D%0A3JkrG5QijIoEEDu9lKj23WAaa7uoCz3jKQcEGBTy5negPcgmb6zF5VBlzZHwP8bq%0D%0ALfy8kQ%3D%3D%0D%0A%7D", "/", "pestpac.com"));
-            cookies.Add(new Cookie("Password", "%7BMGIGCSsGAQQBgjdYA6BVMFMGCisGAQQBgjdYAwGgRTBDAgMCAAACAmYDAgIAwAQI%0D%0AUwgI3RC27ZQEEPF0mqtnLLPoD8RD0GLzHAoEGPjbL9D2c%2FTRssuRwKO%2Fx6kiLuwv%0D%0AO80dEQ%3D%3D%0D%0A%7D", "/", "pestpac.com"));
+            cookies.Add(new Cookie("Password", "", "/", "pestpac.com"));
             cookies.Add(new Cookie("CompanyKey", "%7BMFoGCSsGAQQBgjdYA6BNMEsGCisGAQQBgjdYAwGgPTA7AgMCAAACAmYDAgIAwAQI%0D%0Ak14VXzl3HXMEELPiij6SlNbzJVK7AAHvKDYEEMXKlmOzuOsN2Q866zPBRCY%3D%0D%0A%7D", "/", "pestpac.com"));
 
             loginRequest.AddParameter("CompanyKey", "323480", ParameterType.GetOrPost);
-            loginRequest.AddParameter("Password", "I15Zac$0208", ParameterType.GetOrPost);
+            loginRequest.AddParameter("Password", "", ParameterType.GetOrPost);
             loginRequest.AddParameter("RememberMe", "1", ParameterType.GetOrPost);
             loginRequest.AddParameter("RememberedAuth", "0", ParameterType.GetOrPost);
             loginRequest.AddParameter("SavePassword", "1", ParameterType.GetOrPost);
