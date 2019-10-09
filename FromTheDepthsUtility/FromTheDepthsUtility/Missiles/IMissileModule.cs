@@ -11,7 +11,7 @@ namespace FromTheDepthsUtility.Missiles
         Propulsion
     }
 
-    interface IMissileModule
+    public interface IMissileModule
     {
         byte Health { get; }
         byte Drag { get; }

@@ -121,7 +121,7 @@ namespace ZachLib.HTTP
         }
     }
 
-    public struct LoggableRestRequest : ILoggable
+    public class LoggableRestRequest : ILoggable
     {
         public Dictionary<string, string> Cookies { get; set; }
         public Dictionary<string, long> Files { get; set; }
@@ -172,7 +172,7 @@ namespace ZachLib.HTTP
 
         public override string ToString()
         {
-            return Method.ToString() + Resource + ", " + NumAttempts.ToString() + " Attempts";
+            return Method.ToString() + " " + Resource + ", " + NumAttempts.ToString() + " Attempts";
         }
 
         public void Dispose()
@@ -186,7 +186,7 @@ namespace ZachLib.HTTP
         }
     }
 
-    public struct LoggableRestResponse : ILoggable
+    public class LoggableRestResponse : ILoggable
     {
         public string Content { get; set; }
         public string ContentEncoding { get; set; }

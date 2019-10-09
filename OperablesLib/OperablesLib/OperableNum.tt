@@ -1,0 +1,96 @@
+﻿<#@ template debug="true" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace OperablesLib.OperableImplementations
+{
+    public class OperableNum : Operable
+    {
+        public override OValueType Type { get; protected set; }
+        public object _num;
+
+        public OperableNum(object num, OValueType type)
+        {
+            _num = num;
+            Type = type;
+        }
+
+        public override IOperable Operate(UnaryOperator op)
+        {
+            switch(Type)
+            {
+			    case OValueType.Nil:
+                    return new OperableNum(null, OValueType.Nil);
+
+                case OValueType.Custom:
+                    throw new ArgumentOutOfRangeException();
+                <#
+					foreach(
+						var type in new Dictionary<string,string>() {
+							{ "Bit", "bool" },
+							{ "Byte", "byte" },
+							{ "SByte", "sbyte" },
+							{ "UInt16", "ushort" },
+							{ "Int16", "short" },
+							{ "UInt32", "uint" },
+							{ "Int32", "int" },
+							{ "UInt64", "ulong" },
+							{ "Int64", "long" },
+							{ "Float", "float" },
+							{ "Double", "double" }
+						}
+					) {
+				#>
+
+				case OValueType.<#= type.Key #>:
+					switch (op)
+					{<#
+						foreach(
+							var op in new Tuple<string, string, string, string>[] {
+								new Tuple<string, string, string, string>("Positive", "+{0}", "", ""),
+								new Tuple<string, string, string, string>("Negative", "-{0}", "", "ulong"),
+								new Tuple<string, string, string, string>("NOT", "!{0}", "Bit", ""),
+								new Tuple<string, string, string, string>("Complement", "~{0}", "", "float, double"),
+								new Tuple<string, string, string, string>("Increment", "{0} + 1", "", ""),
+								new Tuple<string, string, string, string>("Decrement", "{0} - 1", "", ""),
+								new Tuple<string, string, string, string>("TRUE", "{0} ? true : false", "Bit", ""),
+								new Tuple<string, string, string, string>("FALSE", "{0} ? true : false", "Bit", "")
+							}
+						) {
+							if ((type.Key == "Bit" && op.Item3 == "Bit") || ((op.Item3 == "" && type.Key != "Bit") && !op.Item4.Contains(type.Value)))
+							{
+							#>
+
+						case UnaryOperator.<#= op.Item1 #>:
+							return new OperableNum(<#= String.Format(op.Item2, "((" + type.Value + ")_num)") #>, OValueType.<#= type.Key #>);
+							<#
+							}
+						}
+					#>
+
+						default:
+							throw new ArgumentOutOfRangeException();
+					}
+
+					<#
+					}#>
+
+            }
+
+			throw new ArgumentOutOfRangeException();
+        }
+
+        public override IOperable Operate(BinaryOperator op, IOperable other)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}

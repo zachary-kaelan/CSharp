@@ -63,6 +63,7 @@
             this.pbxPicture.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pbxPicture.TabIndex = 0;
             this.pbxPicture.TabStop = false;
+            this.pbxPicture.Click += new System.EventHandler(this.pbxPicture_Click);
             // 
             // lblPictureInfo
             // 

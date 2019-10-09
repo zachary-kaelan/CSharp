@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using CsvHelper;
 using ZachLib;
 
 namespace PaypalReportAnalysis
@@ -17,13 +16,20 @@ namespace PaypalReportAnalysis
         [STAThread]
         static void Main()
         {
-            StreamReader sr = new StreamReader(@"C:\Users\ZACH-GAMING\Downloads\Download.CSV");
-            CsvReader cr = new CsvReader(sr, Utils.csvConfig);
-            IEnumerable<Payment> payments = cr.GetRecords<Payment>().ToArray();
-            cr.Dispose();
-            cr = null;
-            sr.Close();
-            sr = null;
+            var payments = Utils.LoadCSV<Payment>(@"C:\Users\ZACH-GAMING\Downloads\Paypal Report.CSV").Where(p => p.GetAmount() < 0);
+
+            var groupedTypes = payments.GroupBy(p => p.Type).OrderBy(g => g.Sum(p => p.GetAmount()));
+            foreach(var type in groupedTypes)
+            {
+                Console.WriteLine("{0} - ${1}", type.Key, type.Sum(p => p.GetAmount()));
+                var groupedNames = type.GroupBy(p => p.Name, p => p.GetAmount(), (k, g) => new KeyValuePair<string, double>(k, g.Sum())).OrderBy(n => n.Value);
+                foreach(var name in groupedNames)
+                {
+                    Console.WriteLine("\t{0} - ${1}", name.Key, name.Value);
+                }
+                Console.WriteLine();
+            }
+            Console.ReadLine();
 
             var names = payments.GroupBy(
                 p => p.Name,

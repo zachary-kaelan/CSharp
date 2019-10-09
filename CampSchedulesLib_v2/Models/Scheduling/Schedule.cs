@@ -17,10 +17,14 @@ namespace CampSchedulesLib_v2.Models.Scheduling
     public class Schedule : IReadOnlyList<Day>
     {
         internal static readonly Random GEN = new Random(523947200);
-        private const double CHANCE_CRITICAL = 0.1;
-        private const double CHANCE_FIRST_ELEMENT = 0.85;
-        private const double CHANCE_INCREASE_SCORE = 0.25;
-        private const double CHANCE_THIRD_REPEATS = 0.75;
+        private const double MUTATION_RATE =                       1.5;
+        private const double CHANCE_CRITICAL =          0.1      * MUTATION_RATE; 
+        private const double CHANCE_FIRST_ELEMENT = 1 - ((1 - 0.85) * MUTATION_RATE);
+        private const double CHANCE_INCREASE_SCORE =    0.25     * MUTATION_RATE;
+        private const double CHANCE_THIRD_REPEATS =     0        * MUTATION_RATE;
+        private const double CHANCE_DOUBLE_BACKTRACK =  0.25     * MUTATION_RATE;
+        private const int NUM_TRIES_BLOCKS = 3;
+        private const int NUM_TRIES_DAYS = 2;
         internal static bool RANDOMNESS_ENABLED = false;
 
         static Schedule()
@@ -45,13 +49,42 @@ namespace CampSchedulesLib_v2.Models.Scheduling
         private int[] DormAgeIndices { get; set; }
         public static float TotalBlocksDuration { get; private set; }
         private SortedDictionary<int, int> RecheckDormCompatibility { get; set; }
-        private Stack<DormActivities[]> DormActivitiesHistory { get; set; }
+//        private Stack<DormActivities[]> DormActivitiesHistory { get; set; }
+        private DormActivities[] InitialDormActivities { get; set; }
+        private SortedSet<string> LastSuccessfulHistory { get; set; }
+
+        public string PATH_FOLDER { get; set; }
 
         private delegate bool FilterOption(DormActivityOption opt);
 
-        public Schedule(string dormActivityPrioritiesPath, string manuallyScheduledPath, string blocksPath)
+        #region Schedule_Setup
+        public Schedule(string path)
         {
-            DormActivitiesHistory = new Stack<DormActivities[]>();
+            PATH_FOLDER = path.TrimEnd('\\') + '\\';
+
+            string[] activityIncompatibilities = File.ReadAllLines(PATH_FOLDER + "Activity Incompatibilities.txt");
+            foreach (var incompatibility in activityIncompatibilities)
+            {
+                var activities = incompatibility.Split(
+                    new char[] { ',', ' ' }, 
+                    StringSplitOptions.RemoveEmptyEntries
+                ).Select(
+                    abbrv => Activities.FindIndex(a => a.Abbreviation == abbrv)
+                ).ToArray();
+
+                for (int a = 0; a < activities.Length - 1; ++a)
+                {
+                    var activity = Activities[activities[a]];
+                    for (int a2 = a + 1; a2 < activities.Length; ++a2)
+                    {
+                        var id = activities[a2];
+                        activity.IncompatibleActivities.Add(id);
+                        Activities[id].IncompatibleActivities.Add(activity.ID);
+                    }
+                }
+            }
+
+            //DormActivitiesHistory = new Stack<DormActivities[]>();
             RecheckDormCompatibility = new SortedDictionary<int, int>();
 
             TotalBlocksDuration = 0;
@@ -86,49 +119,64 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 ActivitiesScheduleHistories[i] = new SortedSet<string>();
             }
 
-            AddBlocks(Utils.LoadCSV<BlockCSV>(blocksPath));
+            AddBlocks(Utils.LoadCSV<BlockCSV>(PATH_FOLDER + "Days.csv"));
 
-            var dormActivityPriorities = Utils.LoadCSV<DormActivityPriorityCSV>(dormActivityPrioritiesPath).GroupBy(
+            var dormActivityPriorities = Utils.LoadCSV<DormActivityPriorityCSV>(PATH_FOLDER + "Additional Dorm Priorities.csv").GroupBy(
                 p => p.Dorm
             ).ToDictionary(
                 g => g.Key,
                 g => g.ToDictionary(
                     p => Activities.FindIndex(
-                        a => a.Abbreviation == p.ActivityAbbreviation 
-                    ), p => p.PriorityChange + 1
+                        a => a.Abbreviation == p.ActivityAbbreviation
+                    ), p => p.PriorityChange
                 )
             );
             DormActivities = Dorms.Select(
                 d => new DormActivities(d, dormActivityPriorities.TryGetValue(d.Abbreviation, out Dictionary<int, int> priorities) ? priorities : new Dictionary<int, int>())
             ).ToArray();
-            
+
             var dorms = DormAgeIndices.Select(d => Dorms[d]).ToList();
             var olderDorms = dorms.SkipWhile(d => d.AgeGroup < 5);
             NumGirls = Dorms.Count(d => d.IsGirl);
-            var genderRatio = ((double)NumGirls) / (NumDorms - NumGirls);
-            var genderDiffRatio = ((genderRatio >= 1 ? genderRatio : (1.0 / genderRatio)) - 1);
+
+            bool equalSizedDorms = true;
+            double genderRatio = -1;
+            double genderDiffRatio = -1;
+            if (NumGirls != NumDorms - NumGirls)
+            {
+                genderRatio = ((double)NumGirls) / (NumDorms - NumGirls);
+                genderDiffRatio = ((genderRatio >= 1 ? genderRatio : (1.0 / genderRatio)) - 1);
+                equalSizedDorms = false;
+            }
+
             for (int i = 0; i < NumDorms; ++i)
             {
                 var dorm = dorms[i];
                 var dormPriorties = DormActivities[dorm.ID].DormPriorities;
                 dormPriorties.Add(dorm.ID, new InterDormTracking(dorm.ID, dorm.ID, 1));
                 IEnumerable<DormInfo> otherDorms = null;
-                var girlEquivalent = (int)(dorm.AgeGroup * genderRatio);
-                if (!dorm.IsGirl && girlEquivalent > dorm.AgeGroup)
-                {
-                    int diffCutOff = (girlEquivalent - dorm.AgeGroup) + 1;
-                    otherDorms = dorms.Skip(i + 1).Where(
-                        d => (d.AgeGroup - dorm.AgeGroup) <= 1 ||
-                             (d.IsGirl && (d.AgeGroup - dorm.AgeGroup) <= diffCutOff)
-                    );
-                }
-                else
-                    otherDorms = dorms.Skip(i + 1).TakeWhile(d => (d.AgeGroup - dorm.AgeGroup) <= 1);
 
-                foreach(var other in otherDorms)
+                if (equalSizedDorms)
+                    otherDorms = dorms.Skip(i + 1).TakeWhile(d => (d.AgeGroup - dorm.AgeGroup) <= 1);
+                else
+                {
+                    var girlEquivalent = (int)(dorm.AgeGroup * genderRatio);
+                    if (!dorm.IsGirl && girlEquivalent > dorm.AgeGroup)
+                    {
+                        int diffCutOff = (girlEquivalent - dorm.AgeGroup) + 1;
+                        otherDorms = dorms.Skip(i + 1).Where(
+                            d => (d.AgeGroup - dorm.AgeGroup) <= 1 ||
+                                 (d.IsGirl && (d.AgeGroup - dorm.AgeGroup) <= diffCutOff)
+                        );
+                    }
+                    else
+                        otherDorms = dorms.Skip(i + 1).TakeWhile(d => (d.AgeGroup - dorm.AgeGroup) <= 1);
+                }
+
+                foreach (var other in otherDorms)
                 {
                     dormPriorties.Add(
-                        other.ID, 
+                        other.ID,
                         new InterDormTracking(
                             dorm.ID,
                             other.ID,
@@ -142,7 +190,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 // youngest dorms have a chance to connect with older dorms
                 if (dorm.AgeGroup == 1)
                 {
-                    foreach(var olderDorm in olderDorms)
+                    foreach (var olderDorm in olderDorms)
                     {
                         dormPriorties.Add(olderDorm.ID, new InterDormTracking(dorm.ID, olderDorm.ID, 1));
                     }
@@ -150,8 +198,8 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             }
 
             ManuallyScheduledBlocks = new SortedDictionary<int, SortedSet<int>>();
-            var manuallyScheduled = Utils.LoadCSV<ManuallyScheduledCSV>(manuallyScheduledPath);
-            foreach(var manual in manuallyScheduled)
+            var manuallyScheduled = Utils.LoadCSV<ManuallyScheduledCSV>(PATH_FOLDER + "Manually Scheduled.csv");
+            foreach (var manual in manuallyScheduled)
             {
                 var dorm = Dorms.FindIndex(d => d.Abbreviation == manual.Dorm);
                 SortedSet<int> blocks = null;
@@ -159,6 +207,8 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     ManuallyScheduledBlocks.Add(dorm, new SortedSet<int>());
                 blocks = ManuallyScheduledBlocks[dorm];
 
+                if (manual.Activity == "CT")
+                    DormActivities[dorm].AvailableActivities.Remove(Activities.Last(a => a.Abbreviation == "CA").ID);
                 var dayBlocks = Days[(int)manual.Day].Blocks;
                 ScheduledActivity activity = null;
                 foreach (var blockID in dayBlocks)
@@ -192,12 +242,24 @@ namespace CampSchedulesLib_v2.Models.Scheduling
 
                 }*/
             }
+
+            var dormActivitiesCopy = new DormActivities[DormActivities.Length];
+            for (int i = 0; i < DormActivities.Length; ++i)
+            {
+                dormActivitiesCopy[i] = (DormActivities)DormActivities[i].Clone();
+            }
+            InitialDormActivities = dormActivitiesCopy;
+            //DormActivitiesHistory.Push(dormActivitiesCopy);
+            //Console.WriteLine("\t\tPUSH INITIAL: " + DormActivitiesHistory.Count);*/
         }
 
         public void AddBlock(DayOfWeek day, Block block)
         {
+            var dayInfo = Days[(int)day];
             Blocks.Add(block);
-            Days[(int)day].Blocks.Add(block.ID);
+            if (block.IsExcess && !dayInfo.Blocks.Any())
+                dayInfo.ExcessPreceeding = true;
+            dayInfo.Blocks.Add(block.ID);
         }
 
         public void AddBlocks(BlockCSV[] blocks)
@@ -213,91 +275,100 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 AddBlock(day, new Block(new TimeSpan(block.Hour, block.Minute, 0), block.Excess));
             }
         }
+        #endregion
 
         public void Create(string path)
         {
             bool backtracked = false;
             int totalBacktracked = 0;
             Stopwatch timer = Stopwatch.StartNew();
+
+            // the index of the backtracking point, within the Backtracking list
+            int backtrackIndex = 0;
+            int pointerCopy = 0;
+
             for (int i = 1; i <= 5; ++i)
             {
                 var day = (DayOfWeek)i;
+
+                var dayInfo = Days[i];
                 ScheduledActivity[][] scheduled = null;
 
                 if (backtracked)
                 {
-                    RANDOMNESS_ENABLED = true;
-                    var dayInfo = Days[i];
                     SortedSet<string> prevScheduled = new SortedSet<string>();
+                    PrevDay(day);
+                    var dormActivitiesCopy = DormActivities.Select(d => (DormActivities)d.Clone()).ToArray();
 
-                    var nextDay = Days[i + 1];
-                    var nextDayBlocks = Days[i + 1].Blocks;
-                    var blockPointer = 0;
-                    Block block = Blocks[nextDayBlocks[0]];
-                    do
+                    LogManager.Enqueue(
+                        "CampSchedules",
+                        EntryType.DEBUG,
+                        "Backtracked to " + day + ", " + backtrackIndex + ", " + dayInfo.Backtracking.Last(),
+                        "Total Scheduled by Day: " + Days.Skip(1).Take(5).Select(
+                            d => d.Blocks.Sum(b => Blocks[b].ScheduleHistory.Count)
+                        ).ToArrayString()
+                    );
+
+                    if (backtrackIndex == 0)
+                        Console.WriteLine(">{0}", day);
+                        // need to make sure the day ahead was cleared
+                    else
                     {
-                        var history = block.ScheduleHistory;
-                        foreach (var abbrv in history)
-                        {
-                            ClearFromHistory(abbrv);
-                        }
-                        ++blockPointer;
-                        block = Blocks[nextDayBlocks[blockPointer]];
-                    } while (block.ScheduleHistory.Count > 0);
+                        Console.WriteLine(">{0}<", day);
+                        backtrackIndex = 0;
+                    }
 
                     byte numBacktracks = 0;
+
+                    // start at the end of the day, and make way towards the end
                     for (int backtrackPointer = dayInfo.Backtracking.Count - 1; backtrackPointer >= 0; --backtrackPointer)
                     {
                         ++numBacktracks;
-                        var startIndex = dayInfo.Backtracking[backtrackPointer];
-                        foreach (
-                            var blockID in dayInfo.Blocks.GetRange(
-                                startIndex, 
-                                backtrackPointer + 1 == dayInfo.Backtracking.Count ? 
-                                    dayInfo.Blocks.Count - startIndex : 
-                                    dayInfo.Backtracking[backtrackPointer + 1] - startIndex
-                            )
-                        ) {
-                            var history = Blocks[blockID].ScheduleHistory;
-                            prevScheduled.UnionWith(history);
-                            foreach(var abbrv in history)
-                            {
-                                ClearFromHistory(abbrv);
-                            }
-                        }
 
                         //FinishHistoryClear();
-                        var dormActivitiesCopy = DormActivitiesHistory.Pop();
-                        for (int d = 0; d < DormActivities.Length; ++d)
+                        //var dormActivitiesCopy = DormActivitiesHistory.Count == 1 ? DormActivitiesHistory.Peek().Select(d => (DormActivities)d.Clone()).ToArray() : DormActivitiesHistory.Pop();
+                        //Console.Write("\tPOP BACKTRACK: " + DormActivitiesHistory.Count);
+                        /*for (int d = 0; d < DormActivities.Length; ++d)
                         {
                             DormActivities[d] = (DormActivities)dormActivitiesCopy[d].Clone();
-                        }
-                        scheduled = ScheduleDay(day, path + @"Days\" + day.ToString() + ".txt", backtrackPointer);
+                        }*/
+                        pointerCopy = backtrackPointer;
+                        scheduled = ScheduleDay(day, path + @"Days\" + day.ToString() + ".txt", ref pointerCopy, true);
 
                         if (
                             scheduled != null &&
                             !prevScheduled.SetEquals(
-                                scheduled.SelectMany(b => b.Select(s => s.Abbreviation))
+                                new SortedSet<string>(scheduled.SelectMany(b => b.Select(s => s.Abbreviation)))
                             )
                         )
                         {
+                            //DormActivitiesHistory.Push(dormActivitiesCopy);
+                            //Console.WriteLine("\t~~PUSH BACKTRACK~~: " + DormActivitiesHistory.Count);
                             LogManager.Enqueue(
                                 "CampSchedules",
                                 EntryType.DEBUG,
                                 "BACKTRACK SUCCEEDED",
                                 "backTracked " + numBacktracks.ToString() + " block sets"
                             );
+                            backtrackIndex = pointerCopy;
                             break;
                         }
+
+                        ClearBlocksFromHistory(day, dayInfo.Backtracking[backtrackPointer - 1], dayInfo.Backtracking[backtrackPointer]);
                     }
+
                     totalBacktracked += numBacktracks;
                     backtracked = false;
                 }
                 else
                 {
+                    backtrackIndex = 0;
                     RANDOMNESS_ENABLED = false;
-                    scheduled = ScheduleDay(day, path + @"Days\" + day.ToString() + ".txt");
+                    Console.WriteLine(day.ToString());// + " (" + DormActivitiesHistory.Count + ")");
+                    
+                    scheduled = ScheduleDay(day, path + @"Days\" + day.ToString() + ".txt", ref backtrackIndex);
                 }
+
                 if (scheduled == null)
                 {
                     ++totalBacktracked;
@@ -307,11 +378,45 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         "BACKTRACKING",
                         day.ToString()
                     );
-                    --i;
+                    
+                    i -= 2;
+                    // next iteration, will be day before current one
+
+                    /*if (backtrackIndex == 0)
+                    {
+                        dayInfo.Pointer = 0;
+                        if (pointerCopy == 1)
+                        {
+                            foreach (var abbrv in LastSuccessfulHistory)
+                            {
+                                ClearFromHistory(abbrv);
+                            }
+                        }
+                        else if (pointerCopy == 2)
+                            throw new NotImplementedException("Can't handle days with more than two sections of blocks.");
+                    }*/
+                    if (i == 0)
+                        ++i;
+                    else if (i > 1 && GEN.NextDouble() < CHANCE_DOUBLE_BACKTRACK)
+                    {
+                        LogManager.Enqueue(
+                            "CampSchedules",
+                            EntryType.DEBUG,
+                            "Extra Backtrack, from " + day + " to " + (DayOfWeek)(i - 1)
+                        );
+
+                        // currently i is the target day, for the next iteration
+                        ClearBlocksFromHistory((DayOfWeek)(i + 1), 0, Days[i + 1].Blocks.Count);
+                        --i;
+                        
+                    }
                     backtracked = true;
                 }
                 else
+                {
                     scheduled.SaveDividedAs(path + @"Days\" + day.ToString() + ".json");
+                    pointerCopy = 0;
+                }
 
                 if (timer.Elapsed.TotalSeconds >= 15)
                 {
@@ -320,9 +425,13 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 }
             }
 
+            Console.WriteLine();
+            Console.WriteLine("Total backtracks: " + totalBacktracked);
+
             var dorms = Dorms.OrderBy(d => d.AgeGroup).ThenBy(d => !d.IsGirl).ToArray();
 
-            var orderedScheduled = ScheduledActivities.OrderBy(s => s.BlockID);
+            var orderedScheduled = ScheduledActivityAbbrvs.Values.Select(s => ScheduledActivities[s]).OrderBy(s => s.BlockID);
+
             var scheduledEnumerator = orderedScheduled.GetEnumerator();
             scheduledEnumerator.MoveNext();
             foreach(var day in Days)
@@ -450,26 +559,46 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             if (!path.EndsWith(@"\"))
                 path += @"\";
 
-            int totalBlocks = Days.Sum(d => d.Blocks.Count(b => !Blocks[b].IsExcess));
+            int totalBlocks = Days.Sum(d => d == null ? 0 : d.Blocks.Count(b => !Blocks[b].IsExcess));
             float blocksPerDay = 4;
+            var orderedScheduled = ScheduledActivityAbbrvs.Values.Select(s => ScheduledActivities[s]).OrderBy(s => s.BlockID);
 
             float[] dormsNumDays = new float[Dorms.Count];
             using (var dormsWriter = new StreamWriter(path + "Dorms.txt"))
             {
                 var priorities = new List<KeyValuePair<string, float>>();
-                var initial = DormActivitiesHistory.Pop();
-                int count = DormActivitiesHistory.Count;
+                //var final = DormActivitiesHistory.Pop();
+                DormActivities[] initial = InitialDormActivities;
+                /*int count = DormActivitiesHistory.Count;
                 for (int i = 0; i < count; ++i)
                 {
                     initial = DormActivitiesHistory.Pop();
+                }*/
+
+                /*for(int d = 0; d < NumDorms; ++d)
+                {
+                    final[d].ScheduleHistory.Clear();
                 }
+                foreach(var activity in orderedScheduled)
+                {
+                    DormActivities[activity.Dorm].ScheduleHistory.Add(activity.Abbreviation);
+                    if (activity.HasOther)
+                        DormActivities[activity.OtherDorm].ScheduleHistory.Add(activity.Abbreviation);
+                }*/
+
                 for (int i = 0; i < Dorms.Count; ++i)
                 {
                     var dormInfo = Dorms[i];
-                    var dormActivities = initial[i];
+                    var initialDormActivities = initial[i];
+                    var finalDormActivities = DormActivities[i];
+
+                    //finalDormActivities.AvailableActivities.IntersectWith(final[i].AvailableActivities);
+                    //finalDormActivities.RepeatableHistory.UnionWith(final[i].RepeatableHistory);
+
                     List<string> activities = new List<string>();
                     List<string> dorms = new List<string>();
                     List<string>[] days = new List<string>[Days.Length];
+                    int[] daysExhaustion = new int[Days.Length];
                     float[] totalDormPriorities = new float[Dorms.Count];
                     for (int d = 0; d < days.Length; ++d)
                     {
@@ -477,19 +606,20 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     }
                     float totalPriority = 0;
 
-                    dormsWriter.WriteLine(dormInfo.Abbreviation + " (" + dormActivities.ScheduleHistory.Count + ")");
+                    dormsWriter.WriteLine(dormInfo.Abbreviation + " (" + finalDormActivities.ScheduleHistory.Count + ")");
 
-                    foreach (var abbrv in dormActivities.ScheduleHistory)
+                    foreach (var abbrv in finalDormActivities.ScheduleHistory)
                     {
                         float priority = 0;
                         var activity = this[abbrv];
                         var activityInfo = Activities[activity.Activity];
+                        activities.Add(activityInfo.Abbreviation);
                         if (activityInfo.Flags.HasFlag(ActivityFlags.Manual))
                             continue;
                         bool repeatable = activityInfo.Flags.HasFlag(ActivityFlags.Repeatable);
-                        var dayIndex = Array.FindIndex(Days, d => d.Blocks.Contains(activity.BlockID));
+                        var dayIndex = Array.FindIndex(Days, d => d != null && d.Blocks.Contains(activity.BlockID));
 
-                        float dormPriority = dormActivities.ActivityPriorities.TryGetValue(activity.Activity, out int activityPriority) ? activityPriority : 0;
+                        float dormPriority = initialDormActivities.ActivityPriorities.TryGetValue(activity.Activity, out int activityPriority) ? activityPriority : 0;
                         priority = activityInfo.Priority;
                         var dayMultiplier = (1 + dayIndex) / 2;
                         if (activityInfo.Flags.HasFlag(ActivityFlags.MultiDorm))
@@ -502,12 +632,13 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                 priority /= 2;
                             if (activity.HasOther)
                             {
-                                var otherDorm = activity.Dorm == i ? activity.OtherDorm : activity.Dorm;
+                                bool amOther = activity.OtherDorm == i;
+                                var otherDorm = amOther ? activity.Dorm : activity.OtherDorm;
                                 totalDormPriorities[otherDorm] += priority;
-                                float otherDormPriority = initial[activity.OtherDorm].ActivityPriorities.TryGetValue(activity.Activity, out int activityPriorityTemp) ? activityPriorityTemp : 0;
+                                float otherDormPriority = initial[otherDorm].ActivityPriorities.TryGetValue(activity.Activity, out int activityPriorityTemp) ? activityPriorityTemp : 0;
                                 priorityTemp += dormPriority == 0 || otherDormPriority == 0 ? 0 :
                                     (2f * dormPriority * otherDormPriority) / (dormPriority + otherDormPriority);
-                                priorityTemp += dormActivities.DormPriorities[otherDorm].Priority;
+                                priorityTemp += amOther ? initial[otherDorm].DormPriorities[i].Priority : initialDormActivities.DormPriorities[otherDorm].Priority;
                                 priorityTemp = priorityTemp / 3;
                                 dorms.Add(Dorms[otherDorm].Abbreviation);
                             }
@@ -528,6 +659,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         totalPriority += priority;
 
                         days[dayIndex].Add(activityInfo.Abbreviation);
+                        daysExhaustion[dayIndex] += activityInfo.ExhaustionLevel;
                     }
 
                     float numDays = ManuallyScheduledBlocks.TryGetValue(i, out SortedSet<int> manual) ?
@@ -537,25 +669,30 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     dormsWriter.WriteLine("\t" + activities.ToArrayString());
                     dormsWriter.WriteLine("\t" + dorms.ToArrayString());
                     dormsWriter.WriteLine("\tDays:");
-                    for (int d = 0; d < days.Length; ++d)
+                    for (int d = 1; d <= 5; ++d)
                     {
-                        if (days[d].Any())
-                        {
-                            dormsWriter.WriteLine("\t\t" + Days[d].DayOfWeek.ToString() + " (" + days[d].Count.ToString() + "): " + days[d].ToArrayString());
-                        }
+                        dormsWriter.WriteLine(
+                            "\t\t" + Days[d].DayOfWeek.ToString() + " (" + days[d].Count.ToString() + "): " + days[d].ToArrayString() + "  ~  " + daysExhaustion[d] + " exertion points"
+                        );
                     }
 
-                    List<string> missingActivities = new List<string>();
-                    dormActivities = DormActivities[i];
-                    foreach (var activity in dormActivities.AvailableActivities)
+                    SortedSet<string> missingActivities = new SortedSet<string>();
+                    foreach (var activity in finalDormActivities.AvailableActivities)
                     {
                         var activityInfo = Activities[activity];
-                        missingActivities.Add(activityInfo.Abbreviation);
-                        if (activityInfo.Flags.HasFlag(ActivityFlags.Repeatable) && !dormActivities.RepeatableHistory.Contains(activityInfo.ID))
+                        if (!activities.Contains(activityInfo.Abbreviation))
+                        {
                             missingActivities.Add(activityInfo.Abbreviation);
+                            /*if (activityInfo.Flags.HasFlag(ActivityFlags.Repeatable))
+                            {
+                                if (!finalDormActivities.RepeatableHistory.Contains(activity))
+                                    missingActivities.Add(activityInfo.Abbreviation);
+                            }
+                            else
+                                missingActivities.Add(activityInfo.Abbreviation);*/
+                        }
                     }
-                    if (missingActivities.Any())
-                        dormsWriter.WriteLine("\tActivities Missed: " + missingActivities.ToArrayString());
+                    dormsWriter.WriteLine("\tActivities Missed: " + missingActivities.ToArrayString());
 
                     List<KeyValuePair<int, float>> otherDormPriorities = new List<KeyValuePair<int, float>>();
                     for (int d = 0; d < Dorms.Count; ++d)
@@ -573,6 +710,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             }
 
             var avgNumDays = dormsNumDays.Average();
+            var dayIndexIncrement = avgNumDays / Days.Count(d => d != null);
 
             using (var activitiesWriter = new StreamWriter(path + "Activities.txt"))
             {
@@ -593,6 +731,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     }
                     List<string> dormPairs = new List<string>();
 
+                    
                     float totalPriority = 0;
 
                     if (activityInfo.Flags.HasFlag(ActivityFlags.MultiDorm))
@@ -601,21 +740,24 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         {
                             var dormInfo = Dorms[activity.Dorm];
                             dorms.Add(dormInfo.Abbreviation);
-                            var dayIndex = Array.FindIndex(Days, d => d.Blocks.Contains(activity.BlockID));
+                            var dayIndex = Array.FindIndex(Days, d => d != null && d.Blocks.Contains(activity.BlockID));
                             var day = days[dayIndex];
                             day.Add(dormInfo.Abbreviation);
-                            var priority = dormsNumDays[activity.Dorm] - dayIndex;
+                            var priority = dormsNumDays[activity.Dorm] - (dayIndex * dayIndexIncrement);
                             if (activity.HasOther)
                             {
                                 var otherDormInfo = Dorms[activity.OtherDorm];
                                 dorms.Add(otherDormInfo.Abbreviation);
                                 dormPairs.Add(dormInfo.Abbreviation + "/" + otherDormInfo.Abbreviation);
                                 day.Add(otherDormInfo.Abbreviation);
-                                priority += dormsNumDays[activity.OtherDorm] - dayIndex;
-                                priority /= 2;
+                                priority += dormsNumDays[activity.OtherDorm] - (dayIndex * dayIndexIncrement);
                             }
                             else
+                            {
                                 dormPairs.Add(dormInfo.Abbreviation);
+                                //priority += dormsNumDays[activity.OtherDorm] - dayIndex;
+                            }
+                            //priority /= 2;
                             totalPriority += priority;
                         }
                     }
@@ -625,14 +767,24 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         {
                             var dormInfo = Dorms[activity.Dorm];
                             dorms.Add(dormInfo.Abbreviation);
-                            var dayIndex = Array.FindIndex(Days, d => d.Blocks.Contains(activity.BlockID));
+                            var dayIndex = Array.FindIndex(Days, d => d != null && d.Blocks.Contains(activity.BlockID));
                             days[dayIndex].Add(dormInfo.Abbreviation);
                             totalPriority += dormsNumDays[activity.Dorm] - dayIndex;
                         }
                     }
                     totalPriority /= avgNumDays;
                     if (activityInfo.Flags.HasFlag(ActivityFlags.Repeatable))
-                        totalPriority /= 2;
+                        totalPriority /= 1.5f;
+                    if (activityInfo.Flags.HasFlag(ActivityFlags.Concurrent))
+                    {
+                        if (activityInfo.MaxConcurrent > 1)
+                            totalPriority /= activityInfo.MaxConcurrent;
+                        else
+                            totalPriority /= 2;
+                    }
+
+                    if (activityInfo.Flags.HasFlag(ActivityFlags.Exclusive))
+                        totalPriority /= (float)Dorms.Count(d => d.AllowedExclusiveActivities.Contains(i)) / NumDorms;
 
                     activitiesWriter.WriteLine("\t" + dorms.ToArrayString());
                     if (dormPairs.Any())
@@ -664,11 +816,12 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 {
                     float totalPriority = 0;
                     var dayInfo = Days[d];
+                    if (dayInfo == null)
+                        continue;
                     daysWriter.WriteLine(dayInfo.DayOfWeek.ToString());
                     float numBlocks = dayInfo.Blocks.Count(b => !Blocks[b].IsExcess);
                     var history = new SortedSet<string>(dayInfo.Blocks.SelectMany(b => Blocks[b].ScheduleHistory));
-                    var activities = new List<string>();
-                    Dictionary<int, List<string>> dormsAndActivities = new Dictionary<int, List<string>>();
+                    Dictionary<int, SortedSet<string>> dormsAndActivities = new Dictionary<int, SortedSet<string>>();
 
                     float multiplier = 0;
                     if (numBlocks != 0)
@@ -683,48 +836,56 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     else
                         numBlocks = 0.25f;
 
-                    foreach(var abbrv in history)
+                    foreach(var block in dayInfo.Blocks)
                     {
-                        var activity = this[abbrv];
-                        var activityInfo = Activities[activity.Activity];
-                        if (activityInfo.Flags.HasFlag(ActivityFlags.Manual))
-                            continue;
-                        activities.Add(activityInfo.Abbreviation);
+                        var blockInfo = Blocks[block];
+                        var activities = new List<string>();
 
-                        var dormInfo = Dorms[activity.Dorm];
-                        float priority = activityInfo.Priority;
-                        float dormPriority = DormActivities[activity.Dorm].ActivityPriorities.TryGetValue(activity.Activity, out int activityPriority) ? activityPriority : 0;
-
-                        List<string> dorms = null;
-                        if (!dormsAndActivities.ContainsKey(activity.Activity))
-                            dormsAndActivities.Add(activity.Activity, new List<string>());
-                        dorms = dormsAndActivities[activity.Activity];
-
-                        if (activity.HasOther)
+                        foreach (var abbrv in blockInfo.ScheduleHistory)
                         {
-                            float otherDormPriority = DormActivities[activity.OtherDorm].ActivityPriorities.TryGetValue(activity.Activity, out activityPriority) ? activityPriority : 0;
-                            priority += dormPriority == 0 || otherDormPriority == 0 ? 0 :
-                                    (2 * dormPriority * otherDormPriority) / (dormPriority + otherDormPriority);
-                            priority /= 2;
-                            priority /= ((dormsNumDays[activity.Dorm] + dormsNumDays[activity.OtherDorm]) / 2) / 4;
-                            dorms.Add(dormInfo.Abbreviation + "/" + Dorms[activity.OtherDorm].Abbreviation);
-                        }
-                        else
-                        {
-                            dorms.Add(dormInfo.Abbreviation);
-                            priority += dormPriority;
-                            priority /= 2;
-                            priority /= dormsNumDays[activity.Dorm] / 4;
-                        }
-                        if (activityInfo.Flags.HasFlag(ActivityFlags.Repeatable))
-                            priority /= 2;
-                        totalPriority += priority;
+                            var activity = this[abbrv];
+                            var activityInfo = Activities[activity.Activity];
+                            if (activityInfo.Flags.HasFlag(ActivityFlags.Manual))
+                                continue;
+                            activities.Add(activityInfo.Abbreviation);
 
+                            var dormInfo = Dorms[activity.Dorm];
+                            float priority = activityInfo.Priority;
+                            float dormPriority = DormActivities[activity.Dorm].ActivityPriorities.TryGetValue(activity.Activity, out int activityPriority) ? activityPriority : 0;
+
+                            SortedSet<string> dorms = null;
+                            if (!dormsAndActivities.ContainsKey(activity.Activity))
+                                dormsAndActivities.Add(activity.Activity, new SortedSet<string>());
+                            dorms = dormsAndActivities[activity.Activity];
+
+                            if (activity.HasOther)
+                            {
+                                float otherDormPriority = DormActivities[activity.OtherDorm].ActivityPriorities.TryGetValue(activity.Activity, out activityPriority) ? activityPriority : 0;
+                                priority += dormPriority == 0 || otherDormPriority == 0 ? 0 :
+                                        (2 * dormPriority * otherDormPriority) / (dormPriority + otherDormPriority);
+                                priority /= 2;
+                                priority /= ((dormsNumDays[activity.Dorm] + dormsNumDays[activity.OtherDorm]) / 2) / 4;
+                                dorms.Add(dormInfo.Abbreviation + "/" + Dorms[activity.OtherDorm].Abbreviation);
+                            }
+                            else
+                            {
+                                dorms.Add(dormInfo.Abbreviation);
+                                priority += dormPriority;
+                                priority /= 2;
+                                priority /= dormsNumDays[activity.Dorm] / 4;
+                            }
+                            if (activityInfo.Flags.HasFlag(ActivityFlags.Repeatable))
+                                priority /= 2;
+                            totalPriority += priority;
+                        }
+
+                        daysWriter.WriteLine("\t" + blockInfo.Start.ToString() + "  ~  " + activities.ToArrayString());
                     }
 
                     totalPriority /= numBlocks;
                     totalPriority *= multiplier;
-                    daysWriter.WriteLine("\t" + activities.ToArrayString());
+                    
+                    //daysWriter.WriteLine("\t" + activities.ToArrayString());
                     daysWriter.WriteLine("\tSchedule:");
                     List<string> filledUp = new List<string>();
                     foreach(var activity in dormsAndActivities)
@@ -738,28 +899,118 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         daysWriter.WriteLine(": " + activity.Value.ToArrayString());
                     }
                     if (filledUp.Any())
-                        daysWriter.WriteLine("Filled Up Activities: " + filledUp.ToArrayString());
-                    daysWriter.WriteLine("Total Priority: " + totalPriority.ToString("#.0"));
+                        daysWriter.WriteLine("\tFilled Up Activities: " + filledUp.ToArrayString());
+                    daysWriter.WriteLine("\tTotal Priority: " + totalPriority.ToString("#.0"));
                 }
             }
         }
 
-        public void ClearFromHistory(ScheduledActivity scheduled)
+        #region History_Management
+        internal void PrevDay(DayOfWeek day)
         {
-            if (ManuallyScheduled.Contains(scheduled.ID))
+            var dayInfo = Days[(int)day];
+            int index1 = dayInfo.Backtracking.Count - 2;
+            int index2 = dayInfo.Backtracking.Last();
+
+            SortedSet<string> fullHistory = new SortedSet<string>();
+            for (int b = dayInfo.Blocks.Count - 1; b >= index2; --b)
+            {
+                fullHistory.UnionWith(Blocks[dayInfo.Blocks[b]].ScheduleHistory);
+            }
+            int prevDayCount = fullHistory.Count;
+            foreach(var abbrv in fullHistory.Reverse())
+            {
+                ClearFromPrevDay(abbrv);
+            }
+
+            fullHistory.Clear();
+
+            for (int b = index1; b < index2; ++b)
+            {
+                fullHistory.UnionWith(Blocks[dayInfo.Blocks[b]].ScheduleHistory);
+            }
+
+            LogManager.Enqueue(
+                "CampSchedules",
+                EntryType.DEBUG,
+                "Rewinding Day",
+                String.Format("{0} - [{1},{2}); {3} rescheduled activities, {4} cleared", day, index1, index2, fullHistory.Count, prevDayCount)
+            );
+
+            foreach (var abbrv in fullHistory)
+            {
+                var scheduledActivity = this[abbrv];
+                DormActivities[scheduledActivity.Dorm].RescheduleActivity(Activities[scheduledActivity.Activity], scheduledActivity, false);
+                if (scheduledActivity.HasOther)
+                    DormActivities[scheduledActivity.OtherDorm].RescheduleActivity(Activities[scheduledActivity.Activity], scheduledActivity, true);
+            }
+
+            RANDOMNESS_ENABLED = true;
+        }
+
+        private void ClearBlocksFromHistory(DayOfWeek day, int pointerStart, int pointerEnd)
+        {
+            var dayInfo = Days[(int)day];
+
+            SortedSet<string> fullHistory = new SortedSet<string>();
+            for (int b = pointerEnd - 1; b >= pointerStart; --b)
+            {
+                fullHistory.UnionWith(Blocks[dayInfo.Blocks[b]].ScheduleHistory);
+            }
+
+            LogManager.Enqueue(
+                "CampSchedules",
+                EntryType.DEBUG,
+                "Clearing Block Activities",
+                String.Format("{0} - [{1},{2}); {3} cleared", day, pointerStart, pointerEnd, fullHistory.Count)
+            );
+
+            foreach (var abbrv in fullHistory.Reverse())
+            {
+                ClearFromPrevDay(abbrv);
+            }
+        }
+
+        public void ClearFromPrevDay(string abbrv)
+        {
+            var scheduledActivity = this[abbrv];
+
+            if (ManuallyScheduled.Contains(scheduledActivity.ID))
                 return;
 
-            ScheduledActivityAbbrvs.Remove(scheduled.Abbreviation);
+            ScheduledActivityAbbrvs.Remove(scheduledActivity.Abbreviation);
+
+            ActivitiesScheduleHistories[scheduledActivity.Activity].Remove(scheduledActivity.Abbreviation);
+            DormActivities[scheduledActivity.Dorm].ClearFromPrevDay(scheduledActivity);
+            if (scheduledActivity.HasOther)
+                DormActivities[scheduledActivity.OtherDorm].ClearFromPrevDay(scheduledActivity, true);
+
+            int maxBlock = scheduledActivity.BlockID + scheduledActivity.Duration;
+            for (int blockID = scheduledActivity.BlockID; blockID < maxBlock; ++blockID)
+            {
+                Blocks[blockID].ScheduleHistory.Remove(scheduledActivity.Abbreviation);
+            }
+        }
+
+        public void ClearFromHistory(ScheduledActivity scheduledActivity)
+        {
+            if (ManuallyScheduled.Contains(scheduledActivity.ID))
+                return;
+
+            ScheduledActivityAbbrvs.Remove(scheduledActivity.Abbreviation);
             /*if (ScheduledActivityAbbrvs.ContainsKey(scheduled.Abbreviation))
                 ScheduledActivityAbbrvs.Remove(scheduled.Abbreviation);
             else
                 Utils.DoNothing();*/
-            ActivitiesScheduleHistories[scheduled.Activity].Remove(scheduled.Abbreviation);
+            ActivitiesScheduleHistories[scheduledActivity.Activity].Remove(scheduledActivity.Abbreviation);
+            DormActivities[scheduledActivity.Dorm].ClearFromHistory(scheduledActivity);
+            if (scheduledActivity.HasOther)
+                DormActivities[scheduledActivity.OtherDorm].ClearFromHistory(scheduledActivity, true);
 
-            int maxBlock = scheduled.BlockID + scheduled.Duration;
-            for (int blockID = scheduled.BlockID; blockID < maxBlock; ++blockID)
+            int maxBlock = scheduledActivity.BlockID + scheduledActivity.Duration;
+            for (int blockID = scheduledActivity.BlockID; blockID < maxBlock; ++blockID)
             {
-                Blocks[blockID].ScheduleHistory.Remove(scheduled.Abbreviation);
+                Blocks[blockID].ScheduleHistory.Remove(scheduledActivity.Abbreviation);
             }
 
             /*int result = DormActivities[scheduled.Dorm].ClearFromHistory(scheduled);
@@ -797,160 +1048,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 ClearFromHistory(scheduled);
             }
         }
-
-        private void FinishHistoryClear()
-        {
-            if (RecheckDormCompatibility.Count == 0)
-                return;
-
-            var otherDorms = new SortedSet<int>(Enumerable.Range(0, 13));
-            otherDorms.ExceptWith(RecheckDormCompatibility.Keys);
-            var checkOthersPrimary = new SortedSet<int>();
-            var checkTheseSecondary = new SortedSet<int>();
-            LogManager.Enqueue(
-                "CampSchedules",
-                EntryType.DEBUG,
-                "Rechecking dorm compatibility for " + RecheckDormCompatibility.Count.ToString() + " dorms",
-                RecheckDormCompatibility.Keys.Select(d => Dorms[d].Abbreviation).ToArrayString()
-            );
-            foreach(var dorm in RecheckDormCompatibility)
-            {
-                if (dorm.Value == 2 && otherDorms.Any())
-                {
-                    foreach(var otherDorm in otherDorms)
-                    {
-                        if (DormActivities[otherDorm].UsedUpOtherDorms.Any(d => d.Dorm == dorm.Key && d.Priority > 0))
-                        {
-                            checkOthersPrimary.Add(otherDorm);
-                            checkTheseSecondary.Add(dorm.Key);
-                        }
-                    }
-                }
-
-                var activities = DormActivities[dorm.Key];
-                if (!activities.UsedUpOtherDorms.Any())
-                    continue;
-                int count = activities.UsedUpOtherDorms.Count;
-                SortedSet<int> dormsBack = new SortedSet<int>();
-                switch(dorm.Value)
-                {
-                    case 2: // we're the problem, and we're newly available today
-                        for (int i = 0; i < count; ++i)
-                        {
-                            var tracker = activities.UsedUpOtherDorms[i];
-                            /*if (!RecheckDormCompatibility.TryGetValue(tracker.Dorm, out int otherValue))
-                                continue;*/
-                            if (
-                                tracker.Priority > 0 && (
-                                    activities.RecheckCompatibility(DormActivities[tracker.Dorm], out bool overlaps) || overlaps
-                                )
-                            ){
-                                dormsBack.Add(tracker.Dorm);
-                                activities.DormPriorities.Add(tracker.Dorm, tracker);
-                                activities.UsedUpOtherDorms.RemoveAt(i);
-                                --i;
-                                --count;
-                            }
-                        }
-                        break;
-
-                    case 1: // someone else is the problem, and we're newly available today
-                        for (int i = 0; i < count; ++i)
-                        {
-                            var tracker = activities.UsedUpOtherDorms[i];
-                            if (!RecheckDormCompatibility.TryGetValue(tracker.Dorm, out int otherValue) || otherValue < 2)
-                                continue;
-                            if (
-                                tracker.Priority > 0 && (
-                                    activities.RecheckCompatibility(
-                                        DormActivities[tracker.Dorm], 
-                                        out _
-                                    ) // we're both newly available today
-                                )
-                            ) {
-                                dormsBack.Add(tracker.Dorm);
-                                activities.DormPriorities.Add(tracker.Dorm, tracker);
-                                activities.UsedUpOtherDorms.RemoveAt(i);
-                                --i;
-                                --count;
-                            }
-                        }
-                        break;
-
-                    case 0: // someone else is the problem, and we're not newly available today
-                        for (int i = 0; i < count; ++i)
-                        {
-                            var tracker = activities.UsedUpOtherDorms[i];
-                            if (!RecheckDormCompatibility.TryGetValue(tracker.Dorm, out int otherValue) || otherValue < 2)
-                                continue;
-                            if (
-                                tracker.Priority > 0 && (
-                                    activities.RecheckCompatibility(
-                                        DormActivities[tracker.Dorm], 
-                                        out bool overlaps
-                                    ) || overlaps
-                                )
-                            )
-                            {
-                                dormsBack.Add(tracker.Dorm);
-                                activities.DormPriorities.Add(tracker.Dorm, tracker);
-                                activities.UsedUpOtherDorms.RemoveAt(i);
-                                --i;
-                                --count;
-                            }
-                        }
-                        break;
-                }
-                if (dormsBack.Count != 0/* && activities.UsedUpOtherDorms.Count != 0*/)
-                    LogManager.Enqueue(
-                        "CampSchedules",
-                        EntryType.DEBUG,
-                        String.Format(
-                            "{0} ({1}) got back {2} dorms out of {3}",
-                            Dorms[dorm.Key],
-                            dorm.Value,
-                            dormsBack.Count,
-                            (dormsBack.Count + activities.UsedUpOtherDorms.Count)
-                        ),
-                        dormsBack.Select(d => Dorms[d].Abbreviation).ToArrayString()
-                    );
-            }
-
-            List<string> secondaryDormsBack = new List<string>();
-            foreach(var dorm in checkOthersPrimary)
-            {
-                var activities = DormActivities[dorm];
-                int count = activities.UsedUpOtherDorms.Count;
-                for (int i = 0; i < count; ++i)
-                {
-                    var tracker = activities.UsedUpOtherDorms[i];
-                    if (
-                        checkTheseSecondary.Contains(tracker.Dorm) &&
-                        tracker.Priority > 0 && (
-                            activities.RecheckCompatibility(
-                                DormActivities[tracker.Dorm], 
-                                out bool overlaps
-                            ) || overlaps
-                        )
-                    ) {
-                        secondaryDormsBack.Add(Dorms[dorm].Abbreviation + "-" + Dorms[tracker.Dorm].Abbreviation);
-                        activities.DormPriorities.Add(tracker.Dorm, tracker);
-                        activities.UsedUpOtherDorms.RemoveAt(i);
-                        --i;
-                        --count;
-                    }
-                }
-            }
-            if (secondaryDormsBack.Count > 0)
-                LogManager.Enqueue(
-                    "CampSchedules",
-                    EntryType.DEBUG,
-                    secondaryDormsBack.Count.ToString() + " secondary dorms gotten back",
-                    secondaryDormsBack.ToArrayString()
-                );
-
-            RecheckDormCompatibility.Clear();
-        }
+        #endregion
 
         public List<DormActivityOption>[] GetOptions(SortedSet<int> availableActivities, int blocksAvailable = 1, bool extendedDurationAvailable = false)
         {
@@ -1029,14 +1127,14 @@ namespace CampSchedulesLib_v2.Models.Scheduling
 
                         if (activityInfo.Flags.HasFlag(ActivityFlags.SingleDorm) && (!soloTracking.PreviousRepeatableActivities.Contains(activityInfo.ID) || !activityInfo.Flags.HasFlag(ActivityFlags.MultiDorm)))
                         {
-                            var option = activityInfo.Flags.HasFlag(ActivityFlags.Excess) && extendedDurationAvailable ?
+                            var option = activityInfo.Flags.HasFlag(ActivityFlags.Excess) && (extendedDurationAvailable || blocksAvailable == 0) ?
                                 new DormActivityOption(
                                     dorm.ID,
                                     activity,
                                     priority,
                                     true,
                                     // High Ropes and Rock Climbing are the only activities with an extended duration if more blocks are available
-                                    blocksAvailable == 0 ? 2 : 3
+                                    extendedDurationAvailable ? 3 : 2
                                 /*blocksAvailable >= 2 ?
                                     (
                                         activityInfo.Abbreviation == "HR" ?
@@ -1226,6 +1324,12 @@ namespace CampSchedulesLib_v2.Models.Scheduling
 
         public ScheduledActivity[] ScheduleActivities(SortedSet<int> availableActivities, List<DormActivityOption>[] options, int startingBlockID, int blocksAvailable = 1, IDictionary<int, SortedSet<int>> manuallyReserved = null, bool extendedDurationAvailable = false, bool RANDOMNESS_ENABLED = false)
         {
+            #region PreLoop_Setup
+            var dormActivitiesCopy = new DormActivities[NumDorms];
+            for (int d = 0; d < NumDorms; ++d)
+            {
+                dormActivitiesCopy[d] = (DormActivities)DormActivities[d].Clone();
+            }
 
             if (blocksAvailable == 0)
             {
@@ -1255,19 +1359,26 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     chosen.Activity,
                     startingBlockID
                 );
-                if (ActivityInfo.HighFatigueActivities.Contains(scheduledActivity.Activity))
+
+                /*if (ActivityInfo.HighFatigueActivities.Contains(scheduledActivity.Activity))
                     DormActivities[chosen.Dorm].AvailableActivitiesToday.ExceptWith(ActivityInfo.HighFatigueActivities);
+                else if (ActivityInfo.LowFatigueActivities.Contains(scheduledActivity.Activity))
+                    DormActivities[chosen.Dorm].AvailableActivitiesToday.ExceptWith(ActivityInfo.LowFatigueActivities);*/
                 ScheduleActivity(
                     scheduledActivity,
                     Activities[chosen.Activity],
                     DormActivities[chosen.Dorm]
                 );
+                LastSuccessfulHistory = new SortedSet<string>();
+                LastSuccessfulHistory.Add(scheduledActivity.Abbreviation);
                 return new ScheduledActivity[] { scheduledActivity };
             }
 
             bool multiBlock = blocksAvailable > 1;
             int count = options.Length;
             int blockIter = 0;
+
+            SortedSet<int> allBlocks = new SortedSet<int>(Enumerable.Range(startingBlockID, blocksAvailable));
 
             SortedSet<int> dormsWithOptions = new SortedSet<int>();
             SortedDictionary<int, DormScheduleTracking> dormsWithBlocks = new SortedDictionary<int, DormScheduleTracking>();
@@ -1282,6 +1393,8 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                             SortedSet<int> blocks = new SortedSet<int>();
                             if (availableActivities.Contains(a.ID))
                             {
+                                if (extendedDurationAvailable && a.Flags.HasFlag(ActivityFlags.Excess))
+                                    blocks.Add(0);
                                 var slotsAvailable = blocksAvailable / a.Duration;
                                 for (int b = 0; b < slotsAvailable; ++b)
                                 {
@@ -1295,8 +1408,13 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         a => new SortedSet<int>() { startingBlockID } //Enumerable.Repeat(startingBlockID, a.Count).ToList()
                     )
             ).ToArray();
+            // what the hell is this for
             if (extendedDurationAvailable && multiBlock)
-                activitiesRemaining[15] = new SortedSet<int>() { startingBlockID };
+                activitiesRemaining[Activities.Last(a => a.Abbreviation == "HR").ID] = new SortedSet<int>() { startingBlockID };
+
+            // field is reserved Tuesday afternoon
+            if (startingBlockID == 8)
+                activitiesRemaining[Activities.First(a => a.Abbreviation == "AF").ID] = new SortedSet<int>() { startingBlockID };
 
             // For each activity available for a dorm, looks at the blocks available and covered by each activity
             // Compares those blocks with the blocks used by the current activity, to see if that activity for the dorm is no longer possible
@@ -1310,88 +1428,84 @@ namespace CampSchedulesLib_v2.Models.Scheduling
 
                 foreach (var activity in activities.AvailableActivitiesToday.Intersect(availableActivities))
                 {
-                    // Timesaver, making sure the activity will even come up
-                    if (availableActivities.Contains(activity))
+                    var info = Activities[activity];
+
+                    SortedSet<int> remainingBlocks = new SortedSet<int>(activitiesRemaining[activity]);
+                    bool noPreviousConflicts = false;
+                    if (tracker.Conflicts.TryGetValue(activity, out SortedSet<int> previousActivityConflicts))
+                        remainingBlocks.ExceptWith(previousActivityConflicts);
+                    else
                     {
-                        var info = Activities[activity];
-
-                        SortedSet<int> remainingBlocks = new SortedSet<int>(activitiesRemaining[activity]);
-                        bool noPreviousConflicts = false;
-                        if (tracker.Conflicts.TryGetValue(activity, out SortedSet<int> previousActivityConflicts))
-                            remainingBlocks.ExceptWith(previousActivityConflicts);
-                        else
-                        {
-                            noPreviousConflicts = true;
-                            previousActivityConflicts = new SortedSet<int>();
-                        }
-
-                        int previousConflictsCount = previousActivityConflicts.Count;
-
-                        bool activityAvailable = false;
-
-                        if (info.Duration > 1)
-                        {
-                            //List<int> availableBlocks = new List<int>();
-                            SortedSet<int> potentialConflicts = new SortedSet<int>();
-
-                            // These activities operate on different rules
-                            int duration = extendedDurationAvailable && info.Flags.HasFlag(ActivityFlags.Excess) ? 3 : info.Duration;
-                            foreach (var remainingBlock in remainingBlocks)
-                            {
-                                var activitySlotBlocks = Enumerable.Range(remainingBlock, duration);
-                                if (!reservedBlocks.Any(r => activitySlotBlocks.Contains(r)))
-                                    activityAvailable = true;
-                                else
-                                    potentialConflicts.Add(remainingBlock);
-                            }
-                            previousActivityConflicts.UnionWith(potentialConflicts);
-                        }
-                        else //if (remainingBlocks.Overlaps(reservedBlocks))
-                        {
-                            int remainingCount = remainingBlocks.Count;
-                            remainingBlocks.IntersectWith(reservedBlocks);
-                            //remainingBlocks.RemoveWhere(rb => !reservedBlocks.Contains(rb));
-                            if (remainingCount != remainingBlocks.Count)
-                            {
-                                activityAvailable = true;
-                                previousActivityConflicts.UnionWith(remainingBlocks);
-                            }
-                            /*else if (remainingBlocks.Any())
-                                previousActivityConflicts.AddRange(remainingBlocks);*/
-                        }
-
-                        if (activityAvailable)
-                        {
-                            if (previousActivityConflicts.Count > previousConflictsCount)
-                            {
-                                if (noPreviousConflicts)
-                                    tracker.Conflicts.Add(activity, previousActivityConflicts);
-                                else
-                                    tracker.Conflicts[activity] = previousActivityConflicts;
-                                if (info.MaxDorms > 1 && hasMultiDormOptions)
-                                {
-                                    newConflicts.Add(new ConflictNode(dormID, activity, true));
-                                    presets.FreshActivityConflicts.Add(activity);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (info.MaxDorms > 1)
-                                newConflicts.Add(new ConflictNode(dormID, activity, false));
-                            presets.UnavailableActivities.Add(activity);
-                            if (!noPreviousConflicts)
-                                tracker.Conflicts.Remove(activity);
-                        }
-
-
-                        /*if (activityAvailable && !noPreviousConflicts)
-                        {
-                            previousActivityConflicts = previousActivityConflicts.Except(reservedBlocks).ToList();
-                            if (previousActivityConflicts.Count == 0)
-                                previousConflicts.Remove(activity);
-                        }*/
+                        noPreviousConflicts = true;
+                        previousActivityConflicts = new SortedSet<int>();
                     }
+
+                    int previousConflictsCount = previousActivityConflicts.Count;
+
+                    bool activityAvailable = false;
+
+                    if (info.Duration > 1)
+                    {
+                        //List<int> availableBlocks = new List<int>();
+                        SortedSet<int> potentialConflicts = new SortedSet<int>();
+
+                        // These activities operate on different rules
+                        int duration = extendedDurationAvailable && info.Flags.HasFlag(ActivityFlags.Excess) ? 3 : info.Duration;
+                        foreach (var remainingBlock in remainingBlocks)
+                        {
+                            var activitySlotBlocks = Enumerable.Range(remainingBlock, duration);
+                            if (!reservedBlocks.Any(r => activitySlotBlocks.Contains(r)))
+                                activityAvailable = true;
+                            else
+                                potentialConflicts.Add(remainingBlock);
+                        }
+                        previousActivityConflicts.UnionWith(potentialConflicts);
+                    }
+                    else //if (remainingBlocks.Overlaps(reservedBlocks))
+                    {
+                        int remainingCount = remainingBlocks.Count;
+                        remainingBlocks.IntersectWith(reservedBlocks);
+                        //remainingBlocks.RemoveWhere(rb => !reservedBlocks.Contains(rb));
+                        if (remainingCount != remainingBlocks.Count)
+                        {
+                            activityAvailable = true;
+                            previousActivityConflicts.UnionWith(remainingBlocks);
+                        }
+                        /*else if (remainingBlocks.Any())
+                            previousActivityConflicts.AddRange(remainingBlocks);*/
+                    }
+
+                    if (activityAvailable)
+                    {
+                        if (previousActivityConflicts.Count > previousConflictsCount)
+                        {
+                            if (noPreviousConflicts)
+                                tracker.Conflicts.Add(activity, previousActivityConflicts);
+                            else
+                                tracker.Conflicts[activity] = previousActivityConflicts;
+                            if (info.MaxDorms > 1 && hasMultiDormOptions)
+                            {
+                                newConflicts.Add(new ConflictNode(dormID, activity, true));
+                                presets.FreshActivityConflicts.Add(activity);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (info.MaxDorms > 1)
+                            newConflicts.Add(new ConflictNode(dormID, activity, false));
+                        presets.UnavailableActivities.Add(activity);
+                        if (!noPreviousConflicts)
+                            tracker.Conflicts.Remove(activity);
+                    }
+
+
+                    /*if (activityAvailable && !noPreviousConflicts)
+                    {
+                        previousActivityConflicts = previousActivityConflicts.Except(reservedBlocks).ToList();
+                        if (previousActivityConflicts.Count == 0)
+                            previousConflicts.Remove(activity);
+                    }*/
                 }
 
                 var unavailableCount = presets.UnavailableActivities.Count;
@@ -1445,29 +1559,34 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                 SortedSet<int> baseBlocks = new SortedSet<int>(tracker.ReservedBlocks);
                                 baseBlocks.UnionWith(otherTracker.ReservedBlocks);
 
-                                overlapping.RemoveWhere(
-                                    a =>
-                                    {
-                                        bool result = false;
-                                        // only bothering to check activities that have fresh changes
-                                        if (thisDormPresets.FreshActivityConflicts.Contains(a))
+                                if (baseBlocks.SetEquals(allBlocks))
+                                    conflictsTracker.AddDormForClearing(otherDorm);
+                                else
+                                {
+                                    overlapping.RemoveWhere(
+                                        a =>
                                         {
-                                            var activityBlocks = activitiesRemaining[a];
-                                            if (!baseBlocks.IsSupersetOf(activityBlocks))
+                                            bool result = false;
+                                            // only bothering to check activities that have fresh changes
+                                            if (thisDormPresets.FreshActivityConflicts.Contains(a))
                                             {
-                                                var blocks = new SortedSet<int>(baseBlocks);
-                                                if (tracker.Conflicts.TryGetValue(a, out SortedSet<int> activityConflicts))
-                                                    blocks.UnionWith(activityConflicts);
-                                                if (otherTracker.Conflicts.TryGetValue(a, out SortedSet<int> otherActivityConflicts))
-                                                    blocks.UnionWith(otherActivityConflicts);
-                                                result = !blocks.IsSupersetOf(activityBlocks);
+                                                var activityBlocks = activitiesRemaining[a];
+                                                if (!baseBlocks.IsSupersetOf(activityBlocks))
+                                                {
+                                                    var blocks = new SortedSet<int>(baseBlocks);
+                                                    if (tracker.Conflicts.TryGetValue(a, out SortedSet<int> activityConflicts))
+                                                        blocks.UnionWith(activityConflicts);
+                                                    if (otherTracker.Conflicts.TryGetValue(a, out SortedSet<int> otherActivityConflicts))
+                                                        blocks.UnionWith(otherActivityConflicts);
+                                                    result = !blocks.IsSupersetOf(activityBlocks);
+                                                }
                                             }
+                                            if (result)
+                                                availableAnyDorm.Add(a);
+                                            return !result;
                                         }
-                                        if (!result)
-                                            availableAnyDorm.Add(a);
-                                        return result;
-                                    }
-                                );
+                                     );
+                                }
 
                                 // overlapping now contains any incompatible activities
                                 if (overlapping.Count > 0)
@@ -1507,8 +1626,22 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 bool presetNull = presetDelegates.Count == 0;
                 bool clearActivity = !activityNull && activityBlockUsed == -1;
                 bool isMultiDormActivity = !activityNull && !clearActivity && Activities[activity].Flags.HasFlag(ActivityFlags.MultiDorm);
-                if (clearActivity)
-                    availableActivities.Remove(activity);
+
+                ActivityInfo activityInfo = null;
+                SortedSet<int> activitiesToCheck = null;
+                //bool incompatibleActivities = false;
+                
+                if (!activityNull)
+                {
+                    activityInfo = Activities[activity];
+                    activitiesToCheck = new SortedSet<int>();
+                    activitiesToCheck.Add(activity);
+                    activitiesToCheck.UnionWith(activityInfo.IncompatibleActivities);
+
+                    if (activityBlockUsed == -1)
+                        availableActivities.Remove(activity);
+                }
+
 
                 if (newConflicts.Count > 0)
                 {
@@ -1583,49 +1716,55 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                             if (conflictsTracker.HasMultiDormOptions)
                                 ResolveFreshConflicts(activities, conflictsTracker, thisDormDelegates, dorm.Value);
                         }
-                        else if (!activityNull && activities.AvailableActivitiesToday.Contains(activity))
+                        else if (!activityNull && activitiesToCheck.Overlaps(activities.AvailableActivitiesToday))
                         {
                             if (clearActivity)
-                                conflictsTracker.ActivitiesToClear.Add(activity);
+                                conflictsTracker.ActivitiesToClear.UnionWith(activitiesToCheck);
                             else
                             {
-                                var blocks = new SortedSet<int>(dorm.Value.ReservedBlocks);
-                                bool activityCleared = false;
-                                var activityBlocks = new SortedSet<int>(activitiesRemaining[activity]);
-                                if (dorm.Value.Conflicts.TryGetValue(activity, out SortedSet<int> activityConflictsTemp))
-                                    blocks.UnionWith(activityConflictsTemp);
-                                if (!blocks.Contains(activityBlockUsed)) // its possible this dorm has already reserved and resolved that block
-                                {
-                                    activityBlocks.ExceptWith(blocks);
-                                    if (activityBlocks.Count == 0)
-                                    {
-                                        conflictsTracker.ActivitiesToClear.Add(activity);
-                                        activityCleared = true;
-                                    }
-                                }
+                                var freshConflicts = new SortedSet<int>();
+                                freshConflicts.UnionWith(activitiesToCheck);
+                                freshConflicts.IntersectWith(activities.AvailableActivitiesToday);
 
-                                // however, secondary dorms might now be incompatible
-                                if (!activityCleared && isMultiDormActivity && activities.AvailableMultiDormActivitiesToday.Contains(activity))
+                                foreach(var freshConflict in freshConflicts)
                                 {
-                                    activityBlocks.ExceptWith(blocks);
-                                    // checking to see if this creates any activity-sourced conflicts
-                                    foreach (var otherDorm in conflictsTracker.IncludedDorms)
+                                    var blocks = new SortedSet<int>(dorm.Value.ReservedBlocks);
+                                    var activityBlocks = new SortedSet<int>(activitiesRemaining[freshConflict]);
+                                    if (dorm.Value.Conflicts.TryGetValue(freshConflict, out SortedSet<int> activityConflictsTemp))
+                                        blocks.UnionWith(activityConflictsTemp);
+                                    if (!blocks.Contains(activityBlockUsed)) // its possible this dorm has already reserved and resolved that block
                                     {
-                                        if (DormActivities[otherDorm].AvailableMultiDormActivitiesToday.Contains(activity))
+                                        activityBlocks.ExceptWith(blocks);
+                                        if (activityBlocks.Count == 0)
                                         {
-                                            var otherDormTracker = dormsWithBlocks[otherDorm];
-                                            var otherDormBlocks = new SortedSet<int>(otherDormTracker.ReservedBlocks);
-                                            if (otherDormTracker.Conflicts.TryGetValue(activity, out SortedSet<int> otherDormConflictsTemp))
-                                                otherDormBlocks.UnionWith(otherDormConflictsTemp);
-                                            // other dorm may have already resolved this conflict
-                                            if (!otherDormBlocks.Contains(activityBlockUsed))
+                                            conflictsTracker.ActivitiesToClear.Add(freshConflict);
+                                            continue;
+                                        }
+                                    }
+
+                                    // however, secondary dorms might now be incompatible
+                                    if (isMultiDormActivity && activities.AvailableMultiDormActivitiesToday.Contains(freshConflict))
+                                    {
+                                        activityBlocks.ExceptWith(blocks);
+                                        // checking to see if this creates any activity-sourced conflicts
+                                        foreach (var otherDorm in conflictsTracker.IncludedDorms)
+                                        {
+                                            if (DormActivities[otherDorm].AvailableMultiDormActivitiesToday.Contains(freshConflict))
                                             {
-                                                otherDormBlocks.ExceptWith(blocks);
-                                                if (otherDormBlocks.Count > 0)
+                                                var otherDormTracker = dormsWithBlocks[otherDorm];
+                                                var otherDormBlocks = new SortedSet<int>(otherDormTracker.ReservedBlocks);
+                                                if (otherDormTracker.Conflicts.TryGetValue(freshConflict, out SortedSet<int> otherDormConflictsTemp))
+                                                    otherDormBlocks.UnionWith(otherDormConflictsTemp);
+                                                // other dorm may have already resolved this conflict
+                                                if (!otherDormBlocks.Contains(activityBlockUsed))
                                                 {
-                                                    activityBlocks.ExceptWith(otherDormBlocks);
-                                                    if (activityBlocks.Count == 0)
-                                                        conflictsTracker.AddInterDormActivityConflict(otherDorm, activity);
+                                                    otherDormBlocks.ExceptWith(blocks);
+                                                    if (otherDormBlocks.Count > 0)
+                                                    {
+                                                        activityBlocks.ExceptWith(otherDormBlocks);
+                                                        if (activityBlocks.Count == 0)
+                                                            conflictsTracker.AddInterDormActivityConflict(otherDorm, freshConflict);
+                                                    }
                                                 }
                                             }
                                         }
@@ -1661,7 +1800,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                     activities.DormPriorities[otherDorm].Options = 0;
                                 }
                                 if (conflictsTracker.HasMultiDormOptions)
-                                    options[dorm.Key].Sort();
+                                    options[dorm.Key].Sort(new DormActivityOptionComparer(activities.DormPriorities));
                             }
                             else
                                 options[dorm.Key].RemoveAll(
@@ -1755,14 +1894,18 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                     );
                             }
                         }
-                        else if (activities.AvailableActivitiesToday.Contains(activity))
+                        else if (activities.AvailableActivitiesToday.Overlaps(activitiesToCheck))
                         {
+                            var freshConflicts = new SortedSet<int>();
+                            freshConflicts.UnionWith(activitiesToCheck);
+                            freshConflicts.IntersectWith(activities.AvailableActivitiesToday);
+
                             if (dorm.Value.OtherDormOptionsRemaining > 0)
                             {
                                 options[dorm.Key].RemoveAll(
                                     o =>
                                     {
-                                        if (o.Activity == activity)
+                                        if (activitiesToCheck.Contains(o.Activity))
                                         {
                                             if (o.HasOther)
                                                 --activities.DormPriorities[o.OtherDorm].Options;
@@ -1773,13 +1916,13 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                         return false;
                                     }
                                 );
-                                options[dorm.Key].Sort();
+                                options[dorm.Key].Sort(new DormActivityOptionComparer(activities.DormPriorities));
                             }
                             else
                                 options[dorm.Key].RemoveAll(
                                     o =>
                                     {
-                                        if (o.Activity == activity)
+                                        if (activitiesToCheck.Contains(o.Activity))
                                         {
                                             --soloTracking.Options;
                                             return true;
@@ -1852,76 +1995,88 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                     );
                             }
                         }
-                        else if (!activityNull && activities.AvailableActivitiesToday.Contains(activity))
+                        else if (!activityNull && activities.AvailableActivitiesToday.Overlaps(activitiesToCheck))
                         {
                             ConflictsResolveTracking conflictsTracker = new ConflictsResolveTracking(dorm.Key, dorm.Value.OtherDormOptionsRemaining > 0);
                             conflictsTracker.GetPotentialConflictingDorms(dorm.Key, null, activities.DormPriorities);
-                            Predicate<DormActivityOption> predicate = null;
 
-                            var blocks = new SortedSet<int>(dorm.Value.ReservedBlocks);
-                            bool activityCleared = false;
-                            var activityBlocks = new SortedSet<int>(activitiesRemaining[activity]);
-                            if (dorm.Value.Conflicts.TryGetValue(activity, out SortedSet<int> activityConflictsTemp))
-                                blocks.UnionWith(activityConflictsTemp);
-                            if (!blocks.Contains(activityBlockUsed)) // its possible this dorm has already reserved and resolved that block
-                            {
-                                activityBlocks.ExceptWith(blocks);
-                                if (activityBlocks.Count == 0)
-                                {
-                                    predicate = o => o.Activity == activity;
-                                    activityCleared = true;
-                                }
-                            }
+                            var freshConflicts = new SortedSet<int>();
+                            freshConflicts.UnionWith(activitiesToCheck);
+                            freshConflicts.IntersectWith(activities.AvailableActivitiesToday);
 
-                            // however, secondary dorms might now be incompatible
-                            if (!activityCleared && isMultiDormActivity && conflictsTracker.HasMultiDormOptions)
+                            foreach(var freshConflict in freshConflicts)
                             {
-                                var otherDormActivityConflicts = new SortedSet<int>();
-                                activityBlocks.ExceptWith(blocks);
-                                // checking to see if this creates any activity-sourced conflicts
-                                foreach (var otherDorm in conflictsTracker.IncludedDorms)
+                                var blocks = new SortedSet<int>(dorm.Value.ReservedBlocks);
+                                var activityBlocks = new SortedSet<int>(activitiesRemaining[freshConflict]);
+                                if (dorm.Value.Conflicts.TryGetValue(freshConflict, out SortedSet<int> activityConflictsTemp))
+                                    blocks.UnionWith(activityConflictsTemp);
+                                if (!blocks.Contains(activityBlockUsed)) // its possible this dorm has already reserved and resolved that block
                                 {
-                                    if (DormActivities[otherDorm].AvailableMultiDormActivitiesToday.Contains(activity))
+                                    activityBlocks.ExceptWith(blocks);
+                                    if (activityBlocks.Count == 0)
                                     {
-                                        var otherDormTracker = dormsWithBlocks[otherDorm];
-                                        var otherDormBlocks = new SortedSet<int>(otherDormTracker.ReservedBlocks);
-                                        if (otherDormTracker.Conflicts.TryGetValue(activity, out SortedSet<int> otherDormConflictsTemp))
-                                            otherDormBlocks.UnionWith(otherDormConflictsTemp);
-                                        // other dorm may have already resolved this conflict
-                                        if (!otherDormBlocks.Contains(activityBlockUsed))
+                                        conflictsTracker.ActivitiesToClear.Add(freshConflict);
+                                        continue;
+                                    }
+                                }
+
+                                // however, secondary dorms might now be incompatible
+                                if (isMultiDormActivity && conflictsTracker.HasMultiDormOptions)
+                                {
+                                    var otherDormActivityConflicts = new SortedSet<int>();
+                                    activityBlocks.ExceptWith(blocks);
+                                    // checking to see if this creates any activity-sourced conflicts
+                                    foreach (var otherDorm in conflictsTracker.IncludedDorms)
+                                    {
+                                        if (DormActivities[otherDorm].AvailableMultiDormActivitiesToday.Contains(freshConflict))
                                         {
-                                            otherDormBlocks.ExceptWith(blocks);
-                                            if (otherDormBlocks.Count > 0)
+                                            var otherDormTracker = dormsWithBlocks[otherDorm];
+                                            var otherDormBlocks = new SortedSet<int>(otherDormTracker.ReservedBlocks);
+                                            if (otherDormTracker.Conflicts.TryGetValue(freshConflict, out SortedSet<int> otherDormConflictsTemp))
+                                                otherDormBlocks.UnionWith(otherDormConflictsTemp);
+                                            // other dorm may have already resolved this conflict
+                                            if (!otherDormBlocks.Contains(activityBlockUsed))
                                             {
-                                                activityBlocks.ExceptWith(otherDormBlocks);
-                                                if (activityBlocks.Count == 0)
-                                                    otherDormActivityConflicts.Add(otherDorm);
+                                                otherDormBlocks.ExceptWith(blocks);
+                                                if (otherDormBlocks.Count > 0)
+                                                {
+                                                    activityBlocks.ExceptWith(otherDormBlocks);
+                                                    if (activityBlocks.Count == 0)
+                                                        otherDormActivityConflicts.Add(otherDorm);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (otherDormActivityConflicts.Count > 0)
+                                    {
+                                        if (otherDormActivityConflicts.Count == 1)
+                                        {
+                                            int otherDorm = otherDormActivityConflicts.First();
+                                            conflictsTracker.AddInterDormActivityConflict(otherDorm, freshConflict);
+                                        }
+                                        else if (!Activities[freshConflict].Flags.HasFlag(ActivityFlags.SingleDorm))
+                                            conflictsTracker.ActivitiesToClear.Add(freshConflict);
+                                        else
+                                        {
+                                            foreach(var otherDorm in otherDormActivityConflicts)
+                                            {
+                                                conflictsTracker.AddInterDormActivityConflict(otherDorm, freshConflict);
                                             }
                                         }
                                     }
                                 }
-
-                                if (otherDormActivityConflicts.Count > 0)
-                                {
-                                    activityCleared = true;
-                                    if (otherDormActivityConflicts.Count == 1)
-                                    {
-                                        int otherDorm = otherDormActivityConflicts.First();
-                                        predicate = o => o.Activity == activity && o.OtherDorm == otherDorm;
-                                    }
-                                    else
-                                        predicate = o => o.Activity == activity && o.HasOther && otherDormActivityConflicts.Contains(o.OtherDorm);
-                                }
                             }
+                            
 
-                            if (activityCleared)
+                            if (conflictsTracker.SelectDelegates())
                             {
-                                if (conflictsTracker.HasMultiDormOptions)
+                                if (conflictsTracker.DoDormDelegates)
                                 {
                                     options[dorm.Key].RemoveAll(
                                         o =>
                                         {
-                                            if (predicate(o))
+                                            if (conflictsTracker.MainDelegates.Any(d => d(o)))
                                             {
                                                 if (o.HasOther)
                                                     --activities.DormPriorities[o.OtherDorm].Options;
@@ -1932,13 +2087,15 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                             return false;
                                         }
                                     );
-                                    options[dorm.Key].Sort();
+                                    
+                                    if (conflictsTracker.HasMultiDormOptions)
+                                        options[dorm.Key].Sort(new DormActivityOptionComparer(activities.DormPriorities));
                                 }
                                 else
                                     options[dorm.Key].RemoveAll(
                                         o =>
                                         {
-                                            if (predicate(o))
+                                            if (conflictsTracker.MainDelegates.Any(d => d(o)))
                                             {
                                                 --soloTracking.Options;
                                                 return true;
@@ -1958,7 +2115,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             }
 
             int changed = 0;
-            void CountOptions(bool log = true)
+            void CountOptions(bool log = false)
             {
                 SortedDictionary<int, int> dormOptionsRemaining = new SortedDictionary<int, int>();
 
@@ -2040,7 +2197,10 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         }
                     }
                     else // other dorms still have this dorm listed as available
+                    {
                         newConflicts.Add(new ConflictNode(d, -1));
+                        options[d].Clear();
+                    }
                 }
 
                 CountOptions(true);
@@ -2072,10 +2232,12 @@ namespace CampSchedulesLib_v2.Models.Scheduling
 
             SortedSet<CSVKeyValuePair<int, int>> previousConcurrentBlocks = new SortedSet<CSVKeyValuePair<int, int>>();
             int maxRemainingBlocks = blocksAvailable;
-            List <ScheduledActivity> scheduled = new List<ScheduledActivity>();
+            List<ScheduledActivity> scheduled = new List<ScheduledActivity>();
+            #endregion
 
             while (dormsWithBlocks.Count > 0)
             {
+                #region Options_Setup
                 dormsWithOptions.Clear();
                 SortedSet<int> notAssigned = new SortedSet<int>();
 
@@ -2109,7 +2271,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
 
                 if (dormsWithOptions.Count == 0)
                 {
-                    if (GEN.NextDouble() < CHANCE_THIRD_REPEATS)
+                    /*if (GEN.NextDouble() < CHANCE_THIRD_REPEATS)
                     {
                         var repeatableActivities = Activities.Where(
                             a => a.Flags.HasFlag(ActivityFlags.Repeatable) &&
@@ -2212,16 +2374,17 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                 );
                             }
                         }
-                    }
+                    }*/
                     
                     if (dormsWithOptions.Count == 0)
                     {
                         LogManager.Enqueue(
                             "CampSchedules",
                             EntryType.ERROR,
-                            "SCHEDULE_ACTIVTIES FAILED",
+                            "ScheduleActivities failed for startingBlockID " + startingBlockID,
                             dormsWithBlocks.Keys.ToArrayString()
                         );
+                        scheduled.Reverse();
                         foreach (var actvity in scheduled)
                         {
                             ClearFromHistory(actvity);
@@ -2252,11 +2415,15 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     Debug.Assert(false);*/
                     //return null;
                 }
+                #endregion
 
                 maxRemainingBlocks = 0;
 
+                bool alreadyLogged = false;
+                bool alreadyLoggedCritical = false;
                 while (notAssigned.Count > 0)
                 {
+                    #region Choosing_Option
                     string scoresString = "";
 
                     DormActivityOption chosen = null;
@@ -2310,6 +2477,22 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                     return score;
                                 }
                             );
+                            if (!alreadyLoggedCritical)
+                            {
+                                LogManager.Enqueue(
+                                    new LogUpdate(
+                                        "CampSchedules",
+                                        EntryType.DEBUG,
+                                        new object[]
+                                        {
+                                            "Dorms are critical; block " + predictedBlock,
+                                            critical.ToArrayString(),
+                                            ties.ToArrayString()
+                                        }
+                                    )
+                                );
+                                alreadyLoggedCritical = true;
+                            }
                             chosen = (!RANDOMNESS_ENABLED || GEN.NextDouble() < CHANCE_FIRST_ELEMENT) ?
                                 ties.First() : 
                                 ties.ElementAt((int)(GEN.NextDouble() * GEN.NextDouble() * ties.Count()));
@@ -2380,6 +2563,21 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                 return false;
                             }
                         ).SelectMany(g => g).OrderBy(o => o, new DormActivityOptionComparer(d => DormActivities[d])).ToList();
+                        if (!alreadyLogged)
+                        {
+                            LogManager.Enqueue(
+                                new LogUpdate(
+                                    "CampSchedules",
+                                    EntryType.DEBUG,
+                                    new object[]
+                                    {
+                                        "Top options for block " + predictedBlock,
+                                        ties.ToArrayString()
+                                    }
+                                )
+                            );
+                            alreadyLogged = true;
+                        }
                         chosen = !RANDOMNESS_ENABLED || GEN.NextDouble() < CHANCE_FIRST_ELEMENT ?
                                 ties.First() :
                                 ties.ElementAt((int)(GEN.NextDouble() * GEN.NextDouble() * ties.Count()));
@@ -2392,41 +2590,14 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         dormsWithOptions.Clear();
                         break;
                     }
+                    #endregion
 
-                    /*if (ties.Count == 1)
-                        chosen = ties[0];
-                    else (ties.Count == 0)
-                        chosen = ties[0];
-                    else
-                    {
-                        var tiesExcess = ties.FindAll(s => s.HasExcess);
-                        if (tiesExcess.Count == 1)
-                            chosen = ties[0];
-                        else
-                            chosen = (
-                                tiesExcess.Count == 0 ? ties : tiesExcess
-                            ).GetByMin(
-                                s => s.HasOther ?
-                                    (optionsLeft[s.Dorm] + optionsLeft[s.OtherDorm]) / 2 :
-                                    optionsLeft[s.Dorm]
-                            );
-                            
-                    }*/
-                    /*else if (!ties.ProgressiveFiltering(OPTION_FILTERS, out ties))
-                        chosen = ties.GetByMin(
-                            s => s.HasOther ?
-                                ((optionsLeft[s.Dorm] + optionsLeft[s.OtherDorm] + DormActivities[s.Dorm].DormPriorities[s.OtherDorm].Options) / 3) - 1 :
-                                (optionsLeft[s.Dorm] + DormActivities[s.Dorm].DormPriorities[s.Dorm].Options) / 2
-                        );
-                    else
-                        chosen = ties[0];*/
-
+                    #region Choosing_Block
                     SortedSet<int> potentialConflicts = new SortedSet<int>();
                     var activityInfo = Activities[chosen.Activity];
                     var dormActivities = DormActivities[chosen.Dorm];
                     var tracker = dormsWithBlocks[chosen.Dorm];
                     var interDormTracker = dormActivities.DormPriorities[chosen.OtherDorm == -1 ? chosen.Dorm : chosen.OtherDorm];
-                    --interDormTracker.Options;
 
                     // If the activity wasn't previously scheduled, then the first block might be one that is unavailable to one of the dorms
                     var dormConflicts = new SortedSet<int>(tracker.ReservedBlocks);
@@ -2481,7 +2652,6 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     else if (RANDOMNESS_ENABLED && GEN.NextDouble() > CHANCE_FIRST_ELEMENT)
                         block = activityBlocks.ElementAt(GEN.Next(activityBlocks.Count));
 
-
                     options[chosen.Dorm].Remove(chosen);
                     //notAssigned.Remove(chosen.Dorm);
 
@@ -2495,6 +2665,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         chosen.HasOther ? chosen.OtherDorm : -1
                     );
                     scheduledActivity.StringExtension = scoresString;
+                    #endregion
 
                     bool clearDorm = !multiBlock;
                     bool clearOtherDorm = !multiBlock && chosen.HasOther;
@@ -2573,21 +2744,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                             otherDormActivities
                         );
 
-                        interDormTracker.ScheduleHistory.Add(scheduledActivity.Abbreviation);
-
-                        --interDormTracker.Priority;
-                        if (interDormTracker.Priority == 0)
-                        {
-                            dormActivities.UsedUpOtherDorms.Add(interDormTracker);
-                            dormActivities.DormPriorities.Remove(chosen.OtherDorm);
-                            options[chosen.Dorm].RemoveAll(o => o.HasOther && o.OtherDorm == chosen.OtherDorm);
-                        }
-                        else if (!dormActivities.OtherDormsDoneToday.Add(chosen.OtherDorm))
-                        {
-                            interDormTracker.AvailableToday = false;
-                            interDormTracker.Options = 0;
-                            options[chosen.Dorm].RemoveAll(o => o.HasOther && o.OtherDorm == chosen.OtherDorm);
-                        }
+                        options[chosen.Dorm].RemoveAll(o => o.HasOther && o.OtherDorm == chosen.OtherDorm);
                     }
                     else
                         ScheduleActivity(
@@ -2596,12 +2753,24 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                             DormActivities[chosen.Dorm]
                         );
 
-                    if (activityInfo.Flags.HasFlag(ActivityFlags.Repeatable) && activityInfo.Flags.HasFlag(ActivityFlags.MultiDorm)/*!chosen.HasOther*/)
-                        interDormTracker.PreviousRepeatableActivities.Add(activityInfo.ID);
-
-                    var exhausting = activityInfo.Flags.HasFlag(ActivityFlags.Exhausting);
+                    /*var exhausting = activityInfo.Flags.HasFlag(ActivityFlags.Exhausting);
+                    var relaxing = activityInfo.Flags.HasFlag(ActivityFlags.Relaxing) && Dorms[chosen.Dorm].AgeGroup > 3;
                     if (exhausting)
                         dormActivities.AvailableActivitiesToday.ExceptWith(ActivityInfo.HighFatigueActivities);
+                    if (relaxing)
+                        dormActivities.AvailableActivitiesToday.ExceptWith(ActivityInfo.LowFatigueActivities);*/
+
+                    if (activityInfo.IncompatibleActivities.Any())
+                    {
+                        foreach(var incompat in activityInfo.IncompatibleActivities)
+                        {
+                            activitiesRemaining[incompat].Remove(block);
+                            /*if (activitiesRemaining[incompat].Any())
+                                newConflicts.Add(new ConflictNode(-1, incompat, true));
+                            else
+                                newConflicts.Add(new ConflictNode(-1, incompat, false));*/
+                        }
+                    }
 
                     if (clearDorm)
                     {
@@ -2621,19 +2790,26 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                             if (activityInfo.MaxDorms > 1)
                                 newConflicts.Add(new ConflictNode(chosen.Dorm, activityInfo.ID));
                         }
+                        presetConflicts.UnavailableActivities.UnionWith(activityInfo.IncompatibleActivities);
 
                         if (chosen.HasOther && !clearOtherDorm)
                             presetConflicts.OtherDorm = chosen.OtherDorm;
-                        if (exhausting)
+                        /*if (exhausting)
                             presetConflicts.UnavailableActivities.UnionWith(ActivityInfo.HighFatigueActivities);
-
+                        if (relaxing)
+                            presetConflicts.UnavailableActivities.UnionWith(ActivityInfo.LowFatigueActivities);*/
+                        
                         presetDelegates.Add(chosen.Dorm, presetConflicts);
                     }
 
                     if (chosen.HasOther)
                     {
+                        /*var otherRelaxing = activityInfo.Flags.HasFlag(ActivityFlags.Relaxing) && Dorms[chosen.OtherDorm].AgeGroup > 3;
                         if (exhausting)
                             otherDormActivities.AvailableActivitiesToday.ExceptWith(ActivityInfo.HighFatigueActivities);
+                        if (otherRelaxing)
+                            otherDormActivities.AvailableActivitiesToday.ExceptWith(ActivityInfo.LowFatigueActivities);*/
+                        
                         if (clearOtherDorm)
                         {
                             newConflicts.Add(new ConflictNode(chosen.OtherDorm, -1));
@@ -2653,26 +2829,31 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                                 newConflicts.Add(new ConflictNode(chosen.OtherDorm, activityInfo.ID));
                             }
 
-                            if (exhausting)
+                            otherPresetConflicts.UnavailableActivities.UnionWith(activityInfo.IncompatibleActivities);
+
+                            /*if (exhausting)
                                 otherPresetConflicts.UnavailableActivities.UnionWith(ActivityInfo.HighFatigueActivities);
+                            if (otherRelaxing)
+                                otherPresetConflicts.UnavailableActivities.UnionWith(ActivityInfo.LowFatigueActivities);*/
 
                             presetDelegates.Add(chosen.OtherDorm, otherPresetConflicts);
                         }
                     }
                     
-                    if (activityInfo.Flags.HasFlag(ActivityFlags.Concurrent))
+                    if (activityInfo.MaxConcurrent == -1)
+                        ResolveConflicts(-1, block);
+                    else if (activityInfo.Flags.HasFlag(ActivityFlags.Concurrent))
                     {
                         var concurrencyInfo = new CSVKeyValuePair<int, int>(block, chosen.Activity);
-                        if (previousConcurrentBlocks.Contains(concurrencyInfo))
+                        var concurrentCount = previousConcurrentBlocks.Count(c => c.Equals(concurrencyInfo));
+                        previousConcurrentBlocks.Add(concurrencyInfo);
+                        if (concurrentCount == activityInfo.MaxConcurrent - 1)
                         {
                             activityBlocks.Remove(block);
                             ResolveConflicts(chosen.Activity, activityBlocks.Count == 0 ? -1 : block);
                         }
                         else
-                        {
-                            previousConcurrentBlocks.Add(concurrencyInfo);
                             ResolveConflicts(-1, block);
-                        }
                     }
                     else
                     {
@@ -2682,24 +2863,27 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 }
                 ++blockIter;
             }
+            LastSuccessfulHistory = new SortedSet<string>(scheduled.Select(s => s.Abbreviation));
             return scheduled.ToArray();
         }
 
-        public ScheduledActivity[] ScheduleBlocks(Block[] blocks)
+        public ScheduledActivity[] ScheduleBlocks(Block[] blocks, bool excessPreceeding)
         {
             var first = blocks.First();
             int blocksAvailable = 0;
             int excessBlocksAvailable = 0;
             Dictionary<int, SortedSet<int>> dormsReservedBlocks = new Dictionary<int, SortedSet<int>>();
             List<ScheduledActivity> scheduled = new List<ScheduledActivity>();
+            SortedSet<int> allBlocks = new SortedSet<int>();
             foreach(var block in blocks)
             {
+                allBlocks.Add(block.ID);
                 if (block.IsExcess)
                     ++excessBlocksAvailable;
                 else
                 {
                     ++blocksAvailable;
-                    foreach (var activity in block.ScheduleHistory)
+                    /*foreach (var activity in block.ScheduleHistory)
                     {
                         var scheduledActivity = this[activity];
                         if (dormsReservedBlocks.ContainsKey(scheduledActivity.Dorm))
@@ -2707,15 +2891,22 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         else
                             dormsReservedBlocks.Add(scheduledActivity.Dorm, new SortedSet<int>() { block.ID });
                         scheduled.Add(scheduledActivity);
-                    }
+                    }*/
                 }
             }
-            bool extendedDurationAvailable = excessBlocksAvailable > 0 || blocksAvailable > 2;
+
+            foreach(var reservedBlocks in ManuallyScheduledBlocks)
+            {
+                if (reservedBlocks.Value.Overlaps(allBlocks))
+                    dormsReservedBlocks.Add(reservedBlocks.Key, new SortedSet<int>(reservedBlocks.Value.Intersect(allBlocks)));
+            }
+
+            bool extendedDurationAvailable = (excessBlocksAvailable > 0 && !excessPreceeding) || (excessPreceeding && blocksAvailable > 2);
             //Console.WriteLine("\t" + first.Abbreviation + "_" + blocksAvailable + (excessBlocksAvailable > 0 ? " (" + excessBlocksAvailable + ")" : ""));
 
             SortedSet<int> availableActivities = null;
             // Get all activities that can actually fit within the allotted time slot
-            if (extendedDurationAvailable)
+            if (excessBlocksAvailable >= 2)
             {
                 availableActivities =
                     new SortedSet<int>(
@@ -2747,13 +2938,14 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             int[] activitiesCopy = new int[availableActivities.Count];
             availableActivities.CopyTo(activitiesCopy);
 
-            var dormActivitiesCopy = new DormActivities[DormActivities.Length];
+            /*var dormActivitiesCopy = new DormActivities[DormActivities.Length];
             for (int i = 0; i < DormActivities.Length; ++i)
             {
                 dormActivitiesCopy[i] = (DormActivities)DormActivities[i].Clone();
-            }
+            }*/           
 
             ScheduledActivity[] otherScheduled = null;
+            bool infiniteTries = first.ID == 0;
             byte numTries = 0;
             do
             {
@@ -2782,10 +2974,10 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         options[i] = new List<DormActivityOption>(optionsCopy[i]);
                     }
 
-                    for (int i = 0; i < DormActivities.Length; ++i)
+                    /*for (int i = 0; i < DormActivities.Length; ++i)
                     {
                         DormActivities[i] = (DormActivities)dormActivitiesCopy[i].Clone();
-                    }
+                    }*/
                     availableActivities.UnionWith(activitiesCopy);
                     RANDOMNESS_ENABLED = true;
                 }
@@ -2795,53 +2987,83 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                     break;
                 }
                 ++numTries;
-            } while (numTries <= 4);
+            } while (numTries <= NUM_TRIES_BLOCKS || infiniteTries);
+
             if (otherScheduled == null)
                 return null;
             else
             {
+                //DormActivitiesHistory.Push(dormActivitiesCopy);
+                //Console.Write("\tPUSH BLOCKS: " + DormActivitiesHistory.Count);
                 scheduled.AddRange(otherScheduled);
                 if (numTries > 1)
                 {
+                    Console.WriteLine(": {0} tries", numTries);
                     LogManager.Enqueue(
                         "CampSchedules",
                         EntryType.DEBUG,
-                        "TRY_AGAIN SUCCEEDED",
+                        "BLOCKS TRY_AGAIN SUCCEEDED",
                         first.Abbreviation + "_" + blocksAvailable + (excessBlocksAvailable > 0 ? " (" + excessBlocksAvailable + ")" : "") + ", " + numTries.ToString() + " tries"
                     );
                 }
+                else
+                    Console.WriteLine();
             }
             return scheduled.ToArray();
         }
 
-        public ScheduledActivity[][] ScheduleDay(DayOfWeek day, string filePath, int backtrackIndex = 0)
+        public ScheduledActivity[][] ScheduleDay(DayOfWeek day, string filePath, ref int backtrackIndex, bool backtracking = false)
         {
-            bool backtracking = backtrackIndex > 0;
-
             //Console.WriteLine(day);
-            foreach(var dormActivities in DormActivities)
+            foreach (var dormActivities in DormActivities)
             {
                 dormActivities.NewDay();
             }
 
-            //System.IO.StreamWriter writer = new System.IO.StreamWriter(filePath) { AutoFlush = true };
+            int firstBacktrackIndex = backtrackIndex;
 
             var dayInfo = this[(int)day];
-            //sb.AppendFormat(" -- {0} -- \r\n", dayInfo.Abbreviation);
-            //Console.WriteLine(dayInfo.Abbreviation);
             var blocks = dayInfo.Blocks;
-            int lastPointer = 0;
+            int lastPointer = dayInfo.Pointer;
             List<ScheduledActivity[]> scheduled = new List<ScheduledActivity[]>();
             if (backtracking)
+            {
                 dayInfo.Pointer = dayInfo.Backtracking[backtrackIndex];
+                RANDOMNESS_ENABLED = true;
+            }
+            else
+            {
+                dayInfo.Pointer = 0;
+                RANDOMNESS_ENABLED = false;
+            }
 
-            var manual = new SortedSet<string>(blocks.SelectMany(b => Blocks[b].ScheduleHistory));
-            foreach(var abbrv in manual)
+            LogManager.Enqueue(
+                "CampSchedules",
+                EntryType.DEBUG,
+                "Scheduling " + day,
+                "backtrackIndex " + backtrackIndex + ", lastPointer + " + lastPointer + ", currentPointer" + dayInfo.Pointer
+            );
+
+            /*var manual = new SortedSet<string>(blocks.SelectMany(b => Blocks[b].ScheduleHistory));
+            foreach (var abbrv in manual)
             {
                 var activity = this[abbrv];
                 if (Activities[activity.Activity].Flags.HasFlag(ActivityFlags.Exhausting))
                     DormActivities[activity.Dorm].AvailableActivitiesToday.ExceptWith(ActivityInfo.HighFatigueActivities);
+                if (Activities[activity.Activity].Flags.HasFlag(ActivityFlags.Relaxing) && Dorms[activity.Dorm].AgeGroup > 3)
+                    DormActivities[activity.Dorm].AvailableActivitiesToday.ExceptWith(ActivityInfo.LowFatigueActivities);
+            }*/
+
+            var firstPointer = dayInfo.Pointer;
+
+            int numSuccesses = 0;
+            var dormActivitiesCopy = new DormActivities[DormActivities.Length];
+            for (int i = 0; i < DormActivities.Length; ++i)
+            {
+                dormActivitiesCopy[i] = (DormActivities)DormActivities[i].Clone();
             }
+
+            int numTries = 0;
 
             while (dayInfo.Pointer < blocks.Count)
             {
@@ -2857,115 +3079,128 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         nextBlock = Blocks[blocks[dayInfo.Pointer]];
                 } while (dayInfo.Pointer < blocks.Count && nextBlock.Start.Hours - currentBlocks.Last().Start.Hours <= 1);
 
-                if (!backtracking || (!dayInfo.FullyBacktracked && dayInfo.Backtracking.Count == backtrackIndex))
-                    dayInfo.Backtracking.Add(lastPointer);
-
-                var dormActivitiesCopy = new DormActivities[DormActivities.Length];
-                for (int i = 0; i < DormActivities.Length; ++i)
+                if (backtracking)
                 {
-                    dormActivitiesCopy[i] = (DormActivities)DormActivities[i].Clone();
-                }
-
-                var currentScheduled = ScheduleBlocks(currentBlocks.ToArray());
-                if (currentScheduled == null)
-                {
-                    if (!backtracking)
-                        ScheduledActivities.SaveAs(@"E:\Work Programming\Higher Ground Program Files\Schedule-" + day.ToString() + "-" + dayInfo.Pointer.ToString() + ".json");
-                    foreach (var scheduledActivity in scheduled.SelectMany(b => b))
-                    {
-                        ClearFromHistory(scheduledActivity);
-                    }
-                    for (int i = 0; i < DormActivities.Length; ++i)
-                    {
-                        DormActivities[i] = (DormActivities)dormActivitiesCopy[i].Clone();
-                    }
-                    for (; backtrackIndex > 0; --backtrackIndex)
-                    {
-                        DormActivitiesHistory.Pop();
-                    }
-                    //FinishHistoryClear();
-                    /*writer.Dispose();
-                    writer.Close();
-                    writer = null;*/
-                    return null;
+                    if (lastPointer != firstPointer && (/*backtrackedPrevDay || */dayInfo.FullyBacktracked || dayInfo.Backtracking.Count > backtrackIndex))
+                        Console.Write("\t>{0}<", lastPointer);
+                    else
+                        Console.Write("\t>{0}", lastPointer);
                 }
                 else
-                    DormActivitiesHistory.Push(dormActivitiesCopy);
-                ++backtrackIndex;
-                scheduled.Add(currentScheduled);
+                    Console.Write("\t{0}", lastPointer);
 
-                /*var scheduleGroups = currentScheduled.GroupBy(s => s.BlockID, s => new ScheduledActivity.StringableScheduled(s)).OrderBy(g => g.Key);
-                
-                int currentCount = currentScheduled.Length;
-                var multiBlock = new List<ScheduledActivity.StringableScheduled>();
-                foreach(var group in scheduleGroups)
+                if (!dayInfo.FullyBacktracked && dayInfo.Backtracking.Count == backtrackIndex)
+                    dayInfo.Backtracking.Add(lastPointer);
+
+                var currentScheduled = ScheduleBlocks(currentBlocks.ToArray(), dayInfo.ExcessPreceeding);
+                if (currentScheduled == null)
                 {
-                    var block = Blocks[group.Key];
-                    writer.WriteLine(
-                        String.Format(
-                            " -- {0}:{1} {2} -- ",
-                            block.Start.Hours > 12 ? block.Start.Hours - 12 : block.Start.Hours,
-                            block.Start.Minutes,
-                            block.Start.Hours >= 12 ? "PM" : "AM"
-                        )
-                    );
+                    ++numTries;
+                    if (!backtracking)
+                        ScheduledActivities.SaveAs(@"E:\Work Programming\Higher Ground Program Files\Schedule-" + day.ToString() + "-" + dayInfo.Pointer.ToString() + ".json");
 
-                    string[] lines = new string[Dorms.Count + 1];
-                    lines[Dorms.Count] = "";
-                    var activities = group.Concat(multiBlock).ToArray();
-                    multiBlock.Clear();
-                    for (int i = 0; i < activities.Length; ++i)
+                    //ClearBlocksFromHistory(day, dayInfo.Pointer, pointerTemp);
+                    scheduled.Reverse();
+                    foreach (var blockSection in scheduled)
                     {
-                        var str = activities[i];
-                        lines[str.DormAgeIndex] = str.DormEntry;
-                        if (str.HasOther)
-                            lines[str.OtherDormAgeIndex] = str.OtherDormEntry;
-                        if (str.Duration > 1)
+                        foreach (var scheduledActivity in blockSection.Reverse())
                         {
-                            --str.Duration;
-                            multiBlock.Add(str);
+                            ClearFromHistory(scheduledActivity);
                         }
                     }
+                    scheduled.Clear();
 
-                    writer.WriteLine(String.Join("\r\n", lines));
-                }*/
+                    if (numTries < NUM_TRIES_DAYS && backtrackIndex > firstBacktrackIndex)
+                    {
+                        foreach (var dormActivities in DormActivities)
+                        {
+                            dormActivities.NewDay();
+                        }
+
+                        backtrackIndex = 0;
+                        var pointerTemp = dayInfo.Pointer;
+                        dayInfo.Pointer = dayInfo.Backtracking[backtrackIndex];
+
+                        backtracking = true;
+                        RANDOMNESS_ENABLED = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine(": FAILED");
+                        if (numTries > 1)
+                        {
+                            Console.WriteLine("  : {0} tries", numTries);
+                            LogManager.Enqueue(
+                                "CampSchedules",
+                                EntryType.DEBUG,
+                                "DAYS TRY_AGAIN FAILED",
+                                String.Format("{0} - {1}", day, lastPointer)
+                            );
+                        }
+                        return null;
+                    }
+
+                    /*foreach (var scheduledActivity in scheduled.SelectMany(b => b))
+                    {
+                        ClearFromHistory(scheduledActivity);
+                    }*/
+                    /*for (int i = 0; i < DormActivities.Length; ++i)
+                    {
+                        DormActivities[i] = (DormActivities)dormActivitiesCopy[i].Clone();
+                    }*/
+
+                    /*if (firstPointer == 0)
+                    {
+                        for (int n = numSuccesses; n > 0; --n)
+                        {
+                            DormActivitiesHistory.Pop();
+                        }
+                        Console.Write("\tPOP DAY ({0} successes): " + DormActivitiesHistory.Count, numSuccesses);
+                    }*/
+                    //FinishHistoryClear();
+                }
+                else
+                {
+                    ++numSuccesses;
+                    ++backtrackIndex;
+                    scheduled.Add(currentScheduled);
+                }
             }
 
-            dayInfo.FullyBacktracked = true;
+            if (numTries > 1)
+            {
+                LogManager.Enqueue(
+                    "CampSchedules",
+                    EntryType.DEBUG,
+                    "DAYS TRY_AGAIN SUCCEEDED",
+                    String.Format("{0} - {1}, {2} tries", day, lastPointer, numTries)
+                );
+            }
 
-            /*writer.Dispose();
-            writer.Close();
-            writer = null;*/
+            /*for (int i = 0; i < DormActivities.Length; ++i)
+            {
+                dormActivitiesCopy[i] = (DormActivities)DormActivities[i].Clone();
+            }
+            DormActivitiesHistory.Push(dormActivitiesCopy);
+            Console.WriteLine("\tPUSH DAY: " + DormActivitiesHistory.Count);*/
+
+            dayInfo.FullyBacktracked = true;
+            
             return scheduled.ToArray();
         }
 
         #region ScheduleActivity
         private void ScheduleActivity(ScheduledActivity scheduled, ActivityInfo activity, params DormActivities[] activities)
         {
-            if (!activity.Flags.HasFlag(ActivityFlags.Repeatable))
-                for(int i = 0; i < activities.Length; ++i)
-                {
-                    activities[i].ScheduleActivity(activity, scheduled.Abbreviation);
-                }
-            else
+            for (int i = 0; i < activities.Length; ++i)
             {
-                var activityStr = activity.ID.ToString();
-                for (int i = 0; i < activities.Length; ++i)
-                {
-                    activities[i].ScheduleActivity(activity, scheduled.Abbreviation, false);
-                    
-
-                    /*var priority = dorm.ActivityPriorities[activity.ID];
-                    --priority;
-                    if (priority == 0)
-                        dorm.ActivityPriorities.Remove(activity.ID);
-                    else
-                        dorm.ActivityPriorities[activity.ID] = priority;*/
-                }
+                activities[i].ScheduleActivity(activity, scheduled);
             }
 
-            ScheduledActivities.Add(scheduled);
-            ScheduledActivityAbbrvs.Add(scheduled.Abbreviation, scheduled.ID);
+            if (ScheduledActivityAbbrvs.TryAdd(scheduled.Abbreviation, scheduled.ID))
+                ScheduledActivities.Add(scheduled);
+            else
+                scheduled.DecrementID(ScheduledActivityAbbrvs[scheduled.Abbreviation]);
             int maxBlock = scheduled.BlockID + scheduled.Duration;
             for (int i = scheduled.BlockID; i < maxBlock; ++i)
             {

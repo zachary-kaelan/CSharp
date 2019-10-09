@@ -11,13 +11,14 @@ namespace SapphoLib.Verbs
         public VerbType VerbType => VerbType.Expressive | VerbType.Targeted;
         internal TraitsVector Traits { get; private set; } // what it says about them
         private TraitsVector ExpressiveAssertions { get; set; } // what they are saying about the target
+        // also has a catharsis factor for the character expressing it
 
         /// <summary>Change perceptions upon observing someone take an expressive action.</summary>
         /// <param name="perception">   Perception of the person executing the verb.
         /// </param>
         /// <returns>     MY reaction to EXECUTER saying VERB about TARGET. 
         /// </returns>
-        public Reaction ApplyToPerception(Perception perception, VerbTargetInfo targetInfo, float magnitude, byte verbNumTimes)
+        public bool ApplyToPerception(Reaction reaction, Perception perception, VerbTargetInfo targetInfo, float magnitude, byte verbNumTimes)
         {
             // pSelf
             // pTarget
@@ -35,7 +36,7 @@ namespace SapphoLib.Verbs
             if (verbProbability >= 0.5)
             {
                 // surpriseMultiplier is 0
-                return null;
+                return false;
             }
 
             byte targetIndex = (byte)(globalPerceptionsIndex - 1);
@@ -44,16 +45,16 @@ namespace SapphoLib.Verbs
             var selfEsteem = traits[0];
 
             // for expressive assertions
-            PersonalityTraits expressiveAgreement = traits[targetIndex] - ExpressiveAssertions;
+            reaction.ExpressiveDissonance = traits[targetIndex] - ExpressiveAssertions;
             var selfAgreement = selfEsteem - Traits;
-            TraitsVector reactionTraits = expressiveAgreement.BlendToBounded(expressiveAgreement + selfAgreement, -targetInfo.KnowThemWell);
+            reaction.TotalDissonance = reaction.ExpressiveDissonance.BlendToBounded(reaction.ExpressiveDissonance + selfAgreement, -targetInfo.KnowThemWell);
 
-            var agreement = (reactionTraits).SumToUBounded();
-            var boundedAgreement = (BoundedNumber)agreement;
+            reaction.Agreement = ((TraitsVector)reaction.TotalDissonance).SumToUBounded();
+            var boundedAgreement = (BoundedNumber)reaction.Agreement;
             var agreementSignificance = boundedAgreement.Significance();
 
-            if (agreementSignificance.Number * magnitude < Perception.INTEREST_MINIMUM)
-                return null;
+            if (agreementSignificance.Number * magnitude < VerbSelection.MINIMUM_VERB_SIGNIFICANCE)
+                return false;
 
             //var agreementInverted = boundedAgreement.UInvert();
 
@@ -66,8 +67,8 @@ namespace SapphoLib.Verbs
             }
 
             // how much attention you pay
-            var surpriseTraits = (surprisePerceptions - Traits);
-            var surprise = surpriseTraits.SumToUBounded();
+            reaction.CharacterDissonance = (surprisePerceptions - Traits);
+            reaction.Surprise = ((TraitsVector)reaction.CharacterDissonance).SumToUBounded();
             
             // if you are a good person, and perceive the person to be dishonest, it will change little
             // trust in yourself vs trust in the other person
@@ -78,7 +79,8 @@ namespace SapphoLib.Verbs
             );
 
             // if you trust them more, disagreements are less of a shock
-            surprise = agreement.Blend(surprise, trust);
+            reaction.Surprise = reaction.Agreement.Blend(reaction.Surprise, trust);
+            reaction.TotalDissonance = reaction.TotalDissonance.BlendToBounded(reaction.CharacterDissonance, trust);
             var scaledAssertions = ExpressiveAssertions * magnitude;
 
             if (perception.CircumferentialValues.TryGetValue(targetInfo.EntityID, out PersonalityTraits cValue))
@@ -111,15 +113,16 @@ namespace SapphoLib.Verbs
 
             //agreement = agreement.Suppress(1 - magnitude);
             // Do you react?
-            var significance = surprise.Blend(agreementSignificance, selfEsteem.Timid_Powerful.WeightingFactor) * magnitude;
+            reaction.Significance = reaction.Surprise.Blend(agreementSignificance, selfEsteem.Timid_Powerful.WeightingFactor) * magnitude;
 
             if (targetInfo.IsYou)
             {
                 if (targetInfo.AffectsTarget)
-                    significance = new UBoundedNumber(significance.Amplify(0.333f));
+                    reaction.Significance = new UBoundedNumber(reaction.Significance.Amplify(0.25f));
+                // side effects
                 traits[targetIndex].Blend(oldTargetPerception + scaledAssertions, trust, true);
-                if (significance.Number < 1 - selfEsteem.Timid_Powerful.WeightingFactor)
-                    return null;
+                if (reaction.Significance.Number < 1 - selfEsteem.Timid_Powerful.WeightingFactor)
+                    return false;
             }
             else
             {
@@ -129,17 +132,13 @@ namespace SapphoLib.Verbs
                     true
                 );
                 if (!targetInfo.AffectsTarget)
-                    significance = significance * 0.667f;
-                if (significance.Number < 1 - selfEsteem.Timid_Powerful.WeightingFactor)
-                    return null;
+                    reaction.Significance = reaction.Significance.Suppress(0.25f);
+                if (reaction.Significance.Number < 1 - selfEsteem.Timid_Powerful.WeightingFactor)
+                    return false;
             }
 
-            return new Reaction(
-                agreement.Suppress(1 - magnitude),
-                surprise,
-                ((PersonalityTraits)reactionTraits).BlendToBounded(surpriseTraits, selfEsteem.Timid_Powerful.WeightingFactor) * magnitude,
-                significance
-            );
+            reaction.Agreement = reaction.Agreement.Suppress(1 - magnitude);
+            return true;
         }
     }
 }

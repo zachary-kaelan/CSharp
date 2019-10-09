@@ -16,7 +16,8 @@ namespace ZachLib.Logging
         ERROR,
         FILE,
         HTTP,
-        PRESET
+        PRESET,
+        WARNING
     };
 
     [Flags]

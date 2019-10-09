@@ -42,9 +42,15 @@
   <ItemGroup>
     <Compile Include="Class1.cs" />
     <Compile Include="Enums.cs" />
+    <Compile Include="Models\Bot.cs" />
+    <Compile Include="Models\BotPerceptions.cs" />
     <Compile Include="Models\Card.cs" />
-    <Compile Include="Models\CardList.cs" />
+    <Compile Include="Models\Deck.cs" />
+    <Compile Include="Models\CardPriority.cs" />
     <Compile Include="Models\Game.cs" />
+    <Compile Include="Models\Hand.cs" />
+    <Compile Include="Models\ICardCollection.cs" />
+    <Compile Include="Models\Player.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

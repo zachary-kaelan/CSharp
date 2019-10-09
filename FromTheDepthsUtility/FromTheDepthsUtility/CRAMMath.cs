@@ -28,8 +28,6 @@ namespace FromTheDepthsUtility
             return ((Math.Max(200f, diameter) - 200f) * (1f / 45f)) + 60f;
         }
 
-        // Packing rate is 0.1 per second per effective material box
-        // Each box counts as 0.5 effective, plus 1 for every attached autoloader
         // Packing density = Ptotal / V
 
         public static float PackingDensity(float pelletsTotal, float volume)
@@ -45,9 +43,9 @@ namespace FromTheDepthsUtility
             return 10f * volume * (pelletsRaw / pelletsTotal) * (1f - (float)Math.Pow(0.9, density));
         }
 
-        public static float EffectivePelletCount(float volume, float density)
+        public static int EffectivePelletCount(float volume, float density)
         {
-            return 10f * volume * (1f - (float)Math.Pow(0.9, density));
+            return (int)(2000 * volume * (1f - (float)Math.Pow(0.9, density)));
         }
 
         // For multiple pellet types, density is computed from total number of pellets
@@ -88,7 +86,7 @@ namespace FromTheDepthsUtility
 
         public static float ShellHealth(float diameter)
         {
-            return (float)(300f * Math.PI * Math.Pow(diameter, 2f));
+            return (float)(300f * Math.PI * (float)Math.Pow(diameter, 2f));
         }
 
         public static float MinimumReloadTime(float diameter)
@@ -105,5 +103,11 @@ namespace FromTheDepthsUtility
         {
             return 145.75f * ((motorBarrels + 1f) / volume + 0.1f);
         }
+
+        // Packing rate is 0.1 per second per effective material box
+        // Each box counts as 0.5 effective, plus 0.5 for every attached autoloader
+
+        public static float PackingRate(int numBoxes, int numAutoloadedBoxes) =>
+            0.05f * (numBoxes + numAutoloadedBoxes);
     }
 }

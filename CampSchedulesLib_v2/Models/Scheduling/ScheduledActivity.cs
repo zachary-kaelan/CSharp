@@ -58,6 +58,12 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             ++ID_COUNTER;
         }
 
+        internal void DecrementID(int newID)
+        {
+            ID = newID;
+            --ID_COUNTER;
+        }
+
         internal class StringableScheduled
         {
             public int DormAgeIndex { get; private set; }
@@ -82,6 +88,9 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                 }
                 Duration = activity.Duration;
             }
+
+            public override string ToString() =>
+                DormEntry + (HasOther ? ", " + OtherDormEntry : "");
         }
     }
 }

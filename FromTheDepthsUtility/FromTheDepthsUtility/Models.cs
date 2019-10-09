@@ -19,8 +19,8 @@ namespace FromTheDepthsUtility
         public Shell(float diameter, float velocity, float numFuses = 0)
         {
             Velocity = velocity;
-            ShellHealth = 300f * Math.PI * Math.Pow(diameter, 2f);
-            Volume = Math.Pow((diameter / 400f), 1.8) - (0.25 * numFuses);
+            ShellHealth = 300f * (float)Math.PI * diameter * diameter;
+            Volume = (float)Math.Pow((diameter / 400f), 1.8) - (0.25f * numFuses);
             Shells = new Dictionary<ShellInstance, Block[]>();
         }
 
@@ -28,7 +28,7 @@ namespace FromTheDepthsUtility
         {
             for (int i = 0; i < blocks.Length; ++i)
             {
-                blocks[i].CombinedAC = DamageMath.CombinedLayersAC(blocks.Skip(i).ToArray());
+                (blocks[i].CombinedAC, blocks[i].KineticAC) = DamageMath.CombinedLayersAC(blocks.Skip(i).ToArray());
             }
             if (!key.CheckRichocet(blocks.First()))
             {
@@ -207,6 +207,7 @@ namespace FromTheDepthsUtility
         public float Weight { get; set; }
         public float ArmourClass { get; set; }
         public float CombinedAC { get; set; }
+        public float KineticAC { get; set; }
         public Tuple<int, int, int> Size { get; set; }
         public int Cost { get; set; }
         public bool Destroyed { get; set;  }
@@ -315,7 +316,7 @@ namespace FromTheDepthsUtility
         private static readonly Random richocetChance = new Random();
         public bool CheckRichocet(Block outmostBlock)
         {
-            float multiplier = DamageMath.DefaultDamageMultiplier(Damage.AP, outmostBlock.CombinedAC);
+            float multiplier = DamageMath.DefaultDamageMultiplier(Damage.AP, outmostBlock.KineticAC);
             StartingDamagePotential = Damage.Kinetic;
             EndingDamagePotential = Damage.Kinetic;
 
@@ -325,7 +326,7 @@ namespace FromTheDepthsUtility
             {
                 // if the shell richocets
                 EndingDamagePotential = Damage.Kinetic - (firstHit / (
-                    richocetChance.NextDouble() <= Math.Pow(
+                    richocetChance.NextDouble() <= (float)Math.Pow(
                         1f - AngleMultiplier,
                         (2f * Damage.AP) / outmostBlock.CombinedAC
                     ) ? multiplier : multiplier * AngleMultiplier
@@ -336,6 +337,27 @@ namespace FromTheDepthsUtility
             EndingDamagePotential = Damage.Kinetic - (firstHit / multiplier);
             ++BlocksDestroyed;
             return false;
+        }
+    }
+
+    public class CRAMPacking
+    {
+        private float Diameter;
+        private float PackingRate;
+        public float Volume;
+
+        private float LastDensity = 0;
+
+        public CRAMPacking(float diameter, float packingRate, int numAutoLoadedAmmo, int numFuses = 0)
+        {
+            Diameter = diameter;
+            PackingRate = packingRate;
+            Volume = CRAMMath.ShellVolume(Diameter, numFuses);
+        }
+
+        public int GetNextPelletTotal()
+        {
+            LastDensity +=
         }
     }
 }

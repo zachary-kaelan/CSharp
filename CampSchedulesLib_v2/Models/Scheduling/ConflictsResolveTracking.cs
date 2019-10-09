@@ -100,8 +100,10 @@ namespace CampSchedulesLib_v2.Models.Scheduling
 
         public bool SelectDelegates()
         {
+            DormsToClear.Remove(Dorm);
             if (ActivitiesToClear.Count > 0)
                 MainDelegates.Insert(0, o => ActivitiesToClear.Contains(o.Activity));
+            
             if (DoDormDelegates)
             {
                 if (DormsToClear.Count > 0)
@@ -125,7 +127,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
                         );
                     else
                         MainDelegates.Add(o => o.HasOther && DormDelegates.Any(d => d(o)));
-                }
+                }                    
             }
 
             return MainDelegates.Count > 0;

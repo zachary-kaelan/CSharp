@@ -15,7 +15,7 @@ namespace VectorTesting
     {
         static void Main(string[] args)
         {
-            SslCredentials creds = new SslCredentials(File.ReadAllText(@"E:\Programming\Vector\Vector-X9H1-00703bbf.cert"));
+            /*SslCredentials creds = new SslCredentials(File.ReadAllText(@"E:\Programming\Vector\Vector-X9H1-00703bbf.cert"));
             Channel channel = new Channel(
                 "192.168.1.97", 443, creds,
                 new ChannelOption[] { new ChannelOption("grpc.ssl_target_name_override", "Vector-X9H1") }
@@ -29,7 +29,8 @@ namespace VectorTesting
             request.ClientName = ByteString.CopyFromUtf8(System.Environment.MachineName);
             request.UserSessionId = ByteString.CopyFromUtf8("2hCXtGMZRtCJqwqe6QHkHP2");
             var response = interfaceStub.UserAuthentication(request);
-            Console.WriteLine(response.Code);
+            Console.WriteLine(response.Code);*/
+
             Console.ReadLine();
         }
     }

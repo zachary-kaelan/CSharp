@@ -34,6 +34,7 @@ namespace FromTheDepthsUtility
 
         private void btnSimulation_Click(object sender, EventArgs e)
         {
+            
 
             float efficiency = ResourceMath.ProcessingEfficiency(Crackers, Cokers, Desalters, Altitude);
             float processingTime = ResourceMath.ProcessingTime(Crackers, Cokers, Desalters);

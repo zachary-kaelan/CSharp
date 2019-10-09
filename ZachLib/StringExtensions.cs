@@ -15,7 +15,9 @@ namespace ZachLib
             if (dict.TryGetValue(str, out string newStr))
                 return newStr;
 
-            string[] keys = dict.Keys.Where(k => k.Length < str.Length).ToArray();
+            string[] keys = dict.Keys.Where(k => k.Length <= str.Length).ToArray();
+            if (keys.Length == 0)
+                return str;
             int minLength = keys.Min(k => k.Length);
             foreach (string key in keys)
             {

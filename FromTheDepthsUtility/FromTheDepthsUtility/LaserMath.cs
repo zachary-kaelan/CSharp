@@ -10,11 +10,11 @@ namespace FromTheDepthsUtility
     {
         public readonly static Dictionary<float, QSwitchInfo> QSwitches = new Dictionary<float, QSwitchInfo>()
         {
-            {0, new QSwitchInfo(40, 0.01, 1, 0.14) },
-            {1, new QSwitchInfo(1, 0.2, 2, 5.65) },
-            {2, new QSwitchInfo(2, 0.1, 2, 4.00) },
-            {3, new QSwitchInfo(3, 0.05, 2, 2.45) },
-            {4, new QSwitchInfo(4, 0.025, 2, 1.41) }
+            {0, new QSwitchInfo(40, 0.01f, 1, 0.14f) },
+            {1, new QSwitchInfo(1, 0.2f, 2, 5.65f) },
+            {2, new QSwitchInfo(2, 0.1f, 2, 4.00f) },
+            {3, new QSwitchInfo(3, 0.05f, 2, 2.45f) },
+            {4, new QSwitchInfo(4, 0.025f, 2, 1.41f) }
         };
 
         // Laser Cavity stores 200 units of laser energy
@@ -38,10 +38,10 @@ namespace FromTheDepthsUtility
                 (cavities / 2f) + 
                 Enumerable.Range(
                     1, Convert.ToInt32(destabilizers)
-                ).Sum(n => (cavities / 2f) * Math.Pow(0.8, (float)Convert.ToDouble(n)))
+                ).Sum(n => (cavities / 2f) * (float)Math.Pow(0.8, (float)Convert.ToDouble(n)))
             );
 
-            return Math.Max(premax, Math.Pow(qswitches, 0.5) * premax);
+            return Math.Max(premax, (float)Math.Pow(qswitches, 0.5) * premax);
         }
 
         // Field of fire is 15 degrees per Laser Steering Optics, up to a max of 90 with 6.
@@ -57,8 +57,8 @@ namespace FromTheDepthsUtility
         public static float AbsorbtionMultiplier(float air, float water, float smoke)
         {
             // air in meters, water in meters, smoke in layers
-            //return Math.Pow(Math.E, -1f * ((0.0003 * air) + (0.01 * water))) * Math.Pow(0.1, smoke);
-            return Math.Pow(Math.E, -1f * ((0.0003 * air) + (0.01 * water) + (2.3 * smoke)));
+            //return (float)Math.Pow(Math.E, -1f * ((0.0003 * air) + (0.01 * water))) * (float)Math.Pow(0.1, smoke);
+            return (float)Math.Pow(Math.E, -1f * ((0.0003 * air) + (0.01 * water) + (2.3 * smoke)));
         }
 
         // Sustained damage is limited by energy going into the laser and energy coming out
@@ -66,7 +66,7 @@ namespace FromTheDepthsUtility
         // Max energy discharged per second is determined by the number of Cavities and Destabilizers
         public static float MaxEnergyPerSecond(float cavities, float destabilizers)
         {
-            return 200f * cavities * (1f - Math.Pow(0.8, destabilizers + 1f));
+            return 200f * cavities * (1f - (float)Math.Pow(0.8, destabilizers + 1f));
         }
 
         // Missiles have 100 HP and 1 AP

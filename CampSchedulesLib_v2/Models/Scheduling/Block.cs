@@ -20,14 +20,5 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             IsExcess = isExcess;
             ++ID_COUNTER;
         }
-
-        public void ClearScheduleHistory()
-        {
-            foreach(var abbrv in ScheduleHistory)
-            {
-
-            }
-        }
-
     }
 }

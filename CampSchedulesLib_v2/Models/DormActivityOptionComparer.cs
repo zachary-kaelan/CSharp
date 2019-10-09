@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CampSchedulesLib_v2.Models.Scheduling;
+using ZachLib;
 
 namespace CampSchedulesLib_v2.Models
 {
@@ -12,6 +13,7 @@ namespace CampSchedulesLib_v2.Models
         private Func<int, DormActivities> GetActivities { get; set; }
         private bool SingleDorm { get; set; }
         private Func<int, int> OtherDormOptions { get; set; }
+        //private static SortedDictionary<CSVKeyValuePair<int, int>, int> _prevSorts = new SortedDictionary<CSVKeyValuePair<int, int>, int>();
         //private List<Tuple<int, int, int, int>> History = new List<Tuple<int, int, int, int>>();
 
         public DormActivityOptionComparer(Func<int, DormActivities> getActivitiesByID)
@@ -71,9 +73,17 @@ namespace CampSchedulesLib_v2.Models
                                     }
                                 }
 
-                                return Schedule.RANDOMNESS_ENABLED && result == 0 ?
-                                    Schedule.GEN.Next(-1, 2) :
-                                    result;
+                                if (result == 0)
+                                {
+                                    if (Schedule.RANDOMNESS_ENABLED)
+                                    {
+                                        return Schedule.GEN.Next(-2, 2);
+                                        //_prevSorts.Add(kv, result);
+                                        //return result;
+                                    }
+                                }
+                                else
+                                    return result;
                             }
                             else // sort descending
                                 result = y.Duration - x.Duration;

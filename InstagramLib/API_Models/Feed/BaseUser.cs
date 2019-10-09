@@ -8,12 +8,12 @@ namespace InstagramLib.API_Models
 {
     public class BaseUser
     {
-        public string full_name { get; private set; }
-        public bool is_private { get; private set; }
-        public bool is_verified { get; private set; }
-        public int pk { get; private set; }
-        public string profie_pic_id { get; private set; }
-        public string profile_pic_url { get; private set; }
-        public string username { get; private set; }
+        public string full_name { get; protected set; }
+        public bool is_private { get; protected set; }
+        public bool is_verified { get; protected set; }
+        public string pk { get; protected set; }
+        public string profie_pic_id { get; protected set; }
+        public string profile_pic_url { get; protected set; }
+        public string username { get; protected set; }
     }
 }

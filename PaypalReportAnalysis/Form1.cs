@@ -8,8 +8,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using CsvHelper;
-using CsvHelper.Configuration;
 using ZachLib;
 
 namespace PaypalReportAnalysis
@@ -23,13 +21,7 @@ namespace PaypalReportAnalysis
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            StreamReader sr = new StreamReader(@"C:\Users\ZACH-GAMING\Downloads\Download.CSV");
-            CsvReader cr = new CsvReader(sr, Utils.csvConfig);
-            IEnumerable<Payment> payments = cr.GetRecords<Payment>().ToArray();
-            cr.Dispose();
-            cr = null;
-            sr.Close();
-            sr = null;
+            var payments = Utils.LoadCSV<Payment>(@"C:\Users\ZACH-GAMING\Downloads\Paypal Report.CSV");
 
             var names = payments.GroupBy(
                 p => p.Name,

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CampSchedulesLib_v2.Models.Info;
 
 namespace CampSchedulesLib_v2.Models.Scheduling
 {
@@ -24,17 +26,80 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             ScheduleHistory = new SortedSet<string>();
             Options = -1;
             Dorm = otherDorm;
+
+            if (ThisDorm == Dorm)
+                AvailableToday = false;
         }
 
         public bool IncludeInResolving() => AvailableToday && Options > 0;
 
-        public object Clone() =>
-            new InterDormTracking(ThisDorm, Dorm, Priority)
+        public void RescheduleActivity(bool doneToday)
+        {
+            if (doneToday)
+                AvailableToday = false;
+
+            Debug.Assert(Priority > 0);
+        }
+
+        public bool ScheduleActivity(ScheduledActivity scheduledActivity, bool doneToday, bool repeatable, bool multiDorm)
+        {
+            if (doneToday)
+            {
+                Options = 0;
+                AvailableToday = false;
+            }
+            else if (!scheduledActivity.HasOther)
+                --Options;
+
+            ScheduleHistory.Add(scheduledActivity.Abbreviation);
+
+            bool soloTracker = ThisDorm == Dorm;
+
+            if (repeatable && (!soloTracker || multiDorm))
+            {
+                if (!PreviousRepeatableActivities.Add(scheduledActivity.Activity))
+                    throw new NotImplementedException("Did a repeatable activity twice with the same Dorm.");
+            }
+
+            if (!soloTracker && --Priority == 0)
+            {
+                Options = 0;
+                AvailableToday = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        public void ClearFromHistory(ScheduledActivity scheduledActivity, bool repeatable, bool multiDorm)
+        {
+            bool soloTracker = ThisDorm == Dorm;
+
+            if (!soloTracker)
+            {
+                ++Priority;
+                AvailableToday = true;
+            }
+
+            if (repeatable && (!soloTracker || multiDorm))
+            {
+                if (!PreviousRepeatableActivities.Remove(scheduledActivity.Activity))
+                    throw new NotImplementedException("Activity not found in PreviousRepeatableActivities.");
+            }
+
+            ScheduleHistory.Remove(scheduledActivity.Abbreviation);
+        }
+
+        public object Clone()
+        {
+            var tracker = new InterDormTracking(ThisDorm, Dorm, Priority)
             {
                 Options = this.Options,
-                PreviousRepeatableActivities = this.PreviousRepeatableActivities,
-                ScheduleHistory = this.ScheduleHistory,
                 AvailableToday = this.AvailableToday
             };
+            tracker.PreviousRepeatableActivities.UnionWith(this.PreviousRepeatableActivities);
+            tracker.ScheduleHistory.UnionWith(this.ScheduleHistory);
+            return tracker;
+        }
     }
 }

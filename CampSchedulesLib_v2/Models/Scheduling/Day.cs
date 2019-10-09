@@ -14,6 +14,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
         internal int Pointer { get; set; }
         internal List<int> Backtracking { get; private set; }
         internal bool FullyBacktracked { get; set; }
+        public bool ExcessPreceeding { get; set; }
 
         private static int ID_COUNTER = 0;
 

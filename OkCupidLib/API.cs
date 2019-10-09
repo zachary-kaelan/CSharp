@@ -152,7 +152,7 @@ namespace OkCupidLib
 
         public static SearchResultsEnumerator<InterestListModel> SearchInterests(string query) =>
             new SearchResultsEnumerator<InterestListModel>(
-                JSON.Deserialize<SearchResults<InterestListModel>>(
+                JSON.Deserialize<DataResponse<InterestListModel>>(
                     CLIENT_MAIN.Execute(
                         new RestRequest(
                             "1/apitun/interests/query",
@@ -169,7 +169,7 @@ namespace OkCupidLib
 
         public static SearchResultsEnumerator<T> SearchMatches<T>(MatchSearchQuery query) where T : BaseUserModel =>
             new SearchResultsEnumerator<T>(
-                JSON.Deserialize<SearchResults<T>>(
+                JSON.Deserialize<DataResponse<T>>(
                     CLIENT_MAIN.Execute(
                         new RestRequest(
                             "/1/apitun/match/search",
@@ -179,7 +179,7 @@ namespace OkCupidLib
                 )
             );
 
-        internal static SearchResults<T> SearchResultsNextPage<T>(string cursor, string resource, object data = null)
+        internal static DataResponse<T> SearchResultsNextPage<T>(string cursor, string resource, object data = null)
         {
             RestRequest request = new RestRequest(resource);
             if (data == null)
@@ -196,14 +196,14 @@ namespace OkCupidLib
                 query.after = cursor;
                 request.AddJsonBody(query);
             }
-            return JSON.Deserialize<SearchResults<T>>(
+            return JSON.Deserialize<DataResponse<T>>(
                 CLIENT_MAIN.Execute(request).Content
             );
         }
 
         public static SearchResultsEnumerator<T> GetConnections<T>(bool outgoing, Fields fields, int limit = 20) =>
             new SearchResultsEnumerator<T>(
-                JSON.Deserialize<SearchResults<T>>(
+                JSON.Deserialize<DataResponse<T>>(
                     CLIENT_MAIN.Execute(
                         new RestRequest(
                             "1/apitun/connections/" + (outgoing ? "outgoing" : "incoming"),

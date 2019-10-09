@@ -58,7 +58,8 @@
       <HintPath>..\packages\HtmlAgilityPack.1.11.1\lib\Net45\HtmlAgilityPack.dll</HintPath>
     </Reference>
     <Reference Include="Jil, Version=2.17.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Jil.2.17.0\lib\net45\Jil.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\JilCustom.2.15.4\lib\Jil.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -91,6 +92,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ByteGenerator.cs" />
     <Compile Include="CollectionExtensions.cs" />
     <Compile Include="Comparers.cs" />
     <Compile Include="EventsAndExceptions\ExecutionEventArgs.cs" />
@@ -98,6 +100,7 @@
     <Compile Include="HTTP\HTTPUtils.cs" />
     <Compile Include="OtherExtensions.cs" />
     <Compile Include="Parsing\XMLModelCreator.cs" />
+    <Compile Include="ReferentialObjects\ReferentialObject.cs" />
     <Compile Include="Statistics\BitSet.cs" />
     <Compile Include="Statistics\Distance.cs" />
     <Compile Include="Statistics\EigenvalueDecomposition.cs" />

@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace CardsLib.Models
 {
-    public class Card
+    public class Card : IComparable<Card>
     {
+        public byte Deck { get; private set; }
         public Suit Suit { get; private set; }
         public Rank Rank { get; private set; }
         public int Points { get; internal set; }
@@ -47,5 +48,30 @@ namespace CardsLib.Models
         }
 
         public override string ToString() => FullName;
+
+        public int CompareTo(Card other)
+        {
+            if (IsUnknown == other.IsUnknown)
+            {
+                if (IsJoker == other.IsJoker)
+                {
+                    if (Suit == other.Suit)
+                    {
+                        if (Rank == other.Rank)
+                        {
+                            return Deck - other.Deck;
+                        }
+                        else
+                            return (int)Rank - (int)other.Rank;
+                    }
+                    else
+                        return (int)Suit - (int)other.Suit;
+                }
+                else
+                    return IsJoker ? -1 : 1;
+            }
+            else
+                return IsUnknown ? 1 : -1;
+        }
     }
 }

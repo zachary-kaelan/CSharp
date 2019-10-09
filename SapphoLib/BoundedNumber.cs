@@ -61,10 +61,18 @@ namespace SapphoLib
 
         public BoundedNumber(float num, float unbounded)
         {
-            _calculatedUnbounded = true;
             _number = num;
-            _unbounded = unbounded;
             _isPositive = num >= 0;
+            if (unbounded == 0 && num != 0)
+            {
+                _calculatedUnbounded = false;
+                _unbounded = 0;
+            }
+            else
+            {
+                _calculatedUnbounded = true;
+                _unbounded = unbounded;
+            }
         }
 
         public static BoundedNumber FromUnboundedNumber(float unbounded) => 
@@ -126,6 +134,9 @@ namespace SapphoLib
         public float Blend(BoundedNumber other, float weightingFactor) =>
             BoundedHelpers.Blend(Number, other.Number, weightingFactor);
 
+        public BoundedNumber BlendToBounded(BoundedNumber other) =>
+            new BoundedNumber((Number + other.Number) / 2, 0);
+
         public BoundedNumber BlendToBounded(BoundedNumber other, BoundedNumber weight) =>
             (other.Number * weight.WeightingFactor) +
             (Number * (1f - weight.WeightingFactor));
@@ -137,7 +148,7 @@ namespace SapphoLib
         public float Suppress() => Number * 0.5f;
 
         public BoundedNumber Suppress(float intensity) => 
-            BoundedHelpers.Blend(0, Number, intensity);
+            BoundedHelpers.Blend(0, Number, 1 - intensity);
 
         public float Amplify() =>
             (Number * 0.5f) + (Number > 0 ? 0.5f : -0.5f);
@@ -156,6 +167,8 @@ namespace SapphoLib
             return WeightingFactor > other.WeightingFactor ? 1 : -1;
         }
 
+        public string ToString(string format) => Number.ToString(format);
+
         public static implicit operator BoundedNumber(float num) => new BoundedNumber(num);
         public static implicit operator float(BoundedNumber bNum) => bNum.Number;
         public static BoundedNumber operator +(BoundedNumber n1, BoundedNumber n2) =>
@@ -163,7 +176,7 @@ namespace SapphoLib
         public static BoundedNumber operator +(BoundedNumber n1, float n2) =>
             FromUnboundedNumber(n1.UnboundedNumber + n2);
         public static BoundedNumber operator -(BoundedNumber n1, BoundedNumber n2) =>
-            (FromUnboundedNumber(Math.Abs(n1.UnboundedNumber - n2.UnboundedNumber)).Number * 2) - 1.0f;
+            FromUnboundedNumber(n1.UnboundedNumber - n2.UnboundedNumber);
         public static BoundedNumber operator -(BoundedNumber num) => num._calculatedUnbounded ? new BoundedNumber(-num.Number, -num._unbounded) : new BoundedNumber(-num.Number);
         public static bool operator !(BoundedNumber num) => num._number < 0;
         public static BoundedNumber operator /(BoundedNumber num, int integer) => FromUnboundedNumber(num.UnboundedNumber / integer);

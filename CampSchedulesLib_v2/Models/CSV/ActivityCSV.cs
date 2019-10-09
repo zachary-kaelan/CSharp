@@ -10,11 +10,12 @@ namespace CampSchedulesLib_v2.Models.CSV
     public class ActivityCSV
     {
         public int Duration { get; set; }
-        //public int ExhaustionLevel { get; set; }
+        public int ExhaustionLevel { get; set; }
         public bool IsExclusive { get; set; }
         public bool ManuallyScheduled { get; set; }
         public int MaxDorms { get; set; }
         public int MinDorms { get; set; }
+        public int MaxConcurrent { get; set; }
         public string Name { get; set; }
         //public int Count { get; set; }
         public int Priority { get; set; }
@@ -37,21 +38,27 @@ namespace CampSchedulesLib_v2.Models.CSV
                 if (Abbreviation == "HR" || Abbreviation == "RC")
                     flags |= ActivityFlags.Excess;
             }
-            else if (Abbreviation == "CL")
+            if (MaxConcurrent > 1 || MaxConcurrent == -1)
                 flags |= ActivityFlags.Concurrent;
             if (MinDorms == 1)
                 flags |= ActivityFlags.SingleDorm;
             if (MaxDorms > 1)
                 flags |= ActivityFlags.MultiDorm;
+            if (ExhaustionLevel >= 4)
+                flags |= ActivityFlags.Exhausting;
+            else if (ExhaustionLevel == 0)
+                flags |= ActivityFlags.Relaxing;
 
             return new ActivityInfo(
                 Name,
                 Abbreviation,
                 Priority,
+                ExhaustionLevel,
                 flags,
                 MaxDorms,
                 MinDorms,
-                Duration
+                Duration,
+                MaxConcurrent
             );
         }
     }

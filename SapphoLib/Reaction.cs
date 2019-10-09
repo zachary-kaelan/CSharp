@@ -8,17 +8,34 @@ namespace SapphoLib
 {
     internal class Reaction
     {
-        public UBoundedNumber Agreement { get; private set; }
-        public UBoundedNumber Surprise { get; private set; }
-        public UBoundedNumber Significance { get; private set; }
-        public TraitsVector Traits { get; private set; }
+        public UBoundedNumber Agreement { get; set; }
+        public UBoundedNumber Surprise { get; set; }
+        public UBoundedNumber Significance { get; set; }
 
-        public Reaction(UBoundedNumber agreement, UBoundedNumber surprise, TraitsVector reactionTraits, UBoundedNumber significance)
+        public PersonalityTraits ExpressiveDissonance { get; set; }
+        public PersonalityTraits CharacterDissonance { get; set; }
+        public PersonalityTraits TotalDissonance { get; set; }
+
+        public Reaction(UBoundedNumber agreement, UBoundedNumber surprise, UBoundedNumber significance, TraitsVector totalDissonance)
         {
             Agreement = agreement;
             Surprise = surprise;
             Significance = significance;
-            Traits = reactionTraits;
+            TotalDissonance = totalDissonance;
+            ExpressiveDissonance = null;
+            CharacterDissonance = null;
+        }
+
+        public Reaction(UBoundedNumber agreement, UBoundedNumber surprise, UBoundedNumber significance, TraitsVector totalDissonance, TraitsVector characterDissonance) : 
+            this(agreement, surprise, significance, totalDissonance)
+        {
+            CharacterDissonance = characterDissonance;
+        }
+
+        public Reaction(UBoundedNumber agreement, UBoundedNumber surprise, UBoundedNumber significance, TraitsVector totalDissonance, TraitsVector characterDissonance, TraitsVector expressiveDissonance) :
+            this(agreement, surprise, significance, totalDissonance, characterDissonance)
+        {
+            ExpressiveDissonance = expressiveDissonance;
         }
     }
 }

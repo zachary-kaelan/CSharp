@@ -52,7 +52,7 @@ namespace SapphoLib.Verbs
             var boundedAgreement = (BoundedNumber)agreement;
             var agreementSignificance = boundedAgreement.Significance();
 
-            if (agreementSignificance.Number * magnitude < Perception.INTEREST_MINIMUM)
+            if (agreementSignificance.Number * magnitude < VerbSelection.MINIMUM_VERB_SIGNIFICANCE)
                 return null;
 
             //var agreementInverted = boundedAgreement.UInvert();

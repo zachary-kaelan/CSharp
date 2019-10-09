@@ -8,14 +8,17 @@ namespace OkCupidLib.Models
 {
     public enum DiscoverySearchSection
     {
+        match_search_politics,
         match_search_pets,
         snapshots,
+        passions,
         match_search_children,
         question_comments,
         match_search_smoking,
         instagram,
         match_search_drinking,
         important_questions,
+        online_now,
         match_search_diet
     }
 

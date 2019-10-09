@@ -12,12 +12,12 @@ namespace OkCupidLib.Models
         public string userid { get; protected set; }
         public bool staff { get; protected set; }
         public string username { get; protected set; }
-        public Thumbs[] thumbs { get; protected set; }
         public bool isAdmin { get; protected set; }
     }
 
     public class BaseProfileModel : BaseUserModel
     {
+        public Thumbs[] thumbs { get; protected set; }
         public UserInfo userinfo { get; protected set; }
     }
 }

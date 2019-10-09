@@ -194,7 +194,7 @@ namespace ZachLib.HTTP
         }
 
         public static HttpStatusCode TryExecute<T>(this RestClient client, IRestRequest request, string logName, Action getToken, out T content) =>
-            client.TryExecute(request, logName, getToken, Options.ISO8601, out content);
+            client.TryExecute(request, logName, getToken, Options.Default, out content);
 
         public static HttpStatusCode TryExecute(this RestClient client, IRestRequest request, string logName, Action getToken)
         {

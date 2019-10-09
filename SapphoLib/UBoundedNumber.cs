@@ -88,10 +88,38 @@ namespace SapphoLib
                 (Number * (1f - weight))
             );
 
-        public static UBoundedNumber operator -(UBoundedNumber num) => new UBoundedNumber(0.99f - num.Number);
+        public string ToString(string format) => Number.ToString(format);
+
+        public static UBoundedNumber operator +(UBoundedNumber num1, UBoundedNumber num2) => FromUnbounded(num1.UnboundedNumber + num2.UnboundedNumber);
+
+        public static UBoundedNumber operator +(UBoundedNumber uNum, BoundedNumber num)
+        {
+            float unbounded = uNum.UnboundedNumber + num.UnboundedNumber;
+            if (unbounded < 0)
+                throw new OverflowException("BoundedNumber " + num.ToString("#.00") + " cannot be added to UBoundedNumber " + uNum.ToString("#.00") + ".");
+            return FromUnbounded(unbounded);
+        }
+
+        public static UBoundedNumber operator -(UBoundedNumber uNum, BoundedNumber num)
+        {
+            float unbounded = uNum.UnboundedNumber - num.UnboundedNumber;
+            if (unbounded < 0)
+                throw new OverflowException("BoundedNumber " + num.ToString("#.00") + " cannot be added to UBoundedNumber " + uNum.ToString("#.00") + ".");
+            return FromUnbounded(unbounded);
+        }
+
+        public static BoundedNumber operator -(UBoundedNumber num) => new BoundedNumber(-num.Number, -num.UnboundedNumber);
         public static UBoundedNumber operator -(UBoundedNumber num, UBoundedNumber other) => new UBoundedNumber(Math.Max(num.Number - other.Number, 0));
         public static UBoundedNumber operator *(UBoundedNumber num, float multiplier) => new UBoundedNumber(num.Number * multiplier);
         public static UBoundedNumber operator /(UBoundedNumber num, float divisor) => new UBoundedNumber(num.Number / divisor);
         public static explicit operator BoundedNumber(UBoundedNumber num) => new BoundedNumber((num.Number * 2f) - 1);
+
+        public static bool operator >(UBoundedNumber num, UBoundedNumber otherNum) => num.Number > otherNum.Number;
+        public static bool operator <(UBoundedNumber num, UBoundedNumber otherNum) => num.Number < otherNum.Number;
+        public static bool operator ==(BoundedNumber num, UBoundedNumber otherNum) => num.Number == otherNum.Number;
+        public static bool operator !=(BoundedNumber num, UBoundedNumber otherNum) => num.Number != otherNum.Number;
+
+        public static bool operator >(UBoundedNumber num, float otherNum) => num.Number > otherNum;
+        public static bool operator <(UBoundedNumber num, float otherNum) => num.Number < otherNum;
     }
 }

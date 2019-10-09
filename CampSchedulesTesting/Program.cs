@@ -32,6 +32,14 @@ namespace CampSchedulesTesting
 
             Console.WriteLine("FINISHED");
             Console.ReadLine();*/
+            
+            var activities = Utils.LoadCSV<ActivityCSV>(
+                PATH + "Activities.csv"
+            );
+            foreach(var activity in activities)
+            {
+                Schedule.Activities.Add(activity.ToInfo());
+            }
 
             Schedule.Dorms.AddRange(
                 File.ReadAllLines(
@@ -46,24 +54,16 @@ namespace CampSchedulesTesting
                         return new DormInfo(
                             split[0],
                             split.Skip(1).Select(
-                                a => Convert.ToInt32(a)
+                                a => Schedule.Activities.First(a2 => a2.Abbreviation == a).ID
                             ).ToArray()
                         );
                     }
                 )
             );
-            
-            var activities = Utils.LoadCSV<ActivityCSV>(
-                PATH + "Activities.csv"
-            );
-            foreach(var activity in activities)
-            {
-                Schedule.Activities.Add(activity.ToInfo());
-            }
 
             //GetPriorities();
 
-            Schedule schedule = new Schedule(PATH + "Additional Dorm Priorities.csv", PATH + "Manually Scheduled.csv", PATH + "Days.csv");
+            Schedule schedule = new Schedule(PATH);
             //schedule.AddBlocks(Utils.LoadCSV<BlockCSV>(PATH + "Days.csv"));
             schedule.Create(PATH);
             schedule.Reports(PATH + "Reports");
@@ -161,35 +161,45 @@ namespace CampSchedulesTesting
         {
             //CreatePrioritiesObjects();
 
+            var dormsNumDays = new float[]
+            {
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                3.5f,   // 4B - RC
+                4,
+                3,      // 5B - CT
+                3.5f,   // 5G - RC
+                2.5f,   // 6B - CV
+                3,      // 6G - CT
+                4
+            };
+            var avgNumDays = dormsNumDays.Average();
+
             var days = Utils.LoadJSON<PriorityDay[]>(PRIORITIES_PATH + "PriorityDays.txt");
             var dorms = Utils.LoadJSON<PriorityDorm[]>(PRIORITIES_PATH + "PriorityDorms.txt").ToDictionary(d => d.Name);
             var activities = Utils.LoadJSON<PriorityActivityFull[]>(PRIORITIES_PATH + "PriorityActivities.txt");
-            SortedDictionary<string, int> activityTotalPriorities = new SortedDictionary<string, int>();
+            SortedDictionary<string, float> activityTotalPriorities = new SortedDictionary<string, float>();
             SortedDictionary<string, int> activityGirlPriorities = new SortedDictionary<string, int>();
             SortedDictionary<string, int> activityBoyPriorities = new SortedDictionary<string, int>();
             SortedDictionary<string, double> activityYoungPriorities = new SortedDictionary<string, double>();
             SortedDictionary<string, int> activityOldPriorities = new SortedDictionary<string, int>();
 
-            foreach(var activity in activities)
-            {
-                activityTotalPriorities.Add(activity.Name, 0);
-                activityGirlPriorities.Add(activity.Name, 0);
-                activityBoyPriorities.Add(activity.Name, 0);
-                activityYoungPriorities.Add(activity.Name, 0);
-                activityOldPriorities.Add(activity.Name, 0);
-            }
-
             List<KeyValuePair<string, int>>[] dormActivityPriorities = new List<KeyValuePair<string, int>>[dorms.Count];
 
             List<string> dormIndices = new List<string>();
+            float dayIndexIncrement = days.Length / avgNumDays;
 
             int dormIndex = 0;
-            foreach(var dorm in dorms.Values)
+            foreach (var dorm in dorms.Values)
             {
                 dormIndices.Add(dorm.Name);
                 List<KeyValuePair<string, int>> priorities = new List<KeyValuePair<string, int>>();
                 int activityPriority = dorm.Activities.Count;
-                foreach(var activity in dorm.Activities)
+                foreach (var activity in dorm.Activities)
                 {
                     priorities.Add(new KeyValuePair<string, int>(activity, activityPriority));
                     --activityPriority;
@@ -198,8 +208,72 @@ namespace CampSchedulesTesting
 
                 ++dormIndex;
             }
+            
+            foreach (var activity in activities)
+            {
+                var activityInfo = Schedule.Activities.First(a => a.Abbreviation == activity.Name);
+                float totalPriority = 0;
+                if (activity.DormPairs.Any())
+                {
+                    for (int i = 0; i < activity.Days.Length; ++i)
+                    {
+                        var day = activity.Days[i].Value;
+                        int dayIndex = i + 1;
+                        float dayPriorityTemp = 0;
 
-            int dayPriority = 4;
+                        foreach(var dorm in day)
+                        {
+                            dayPriorityTemp += dormsNumDays[dormIndices.IndexOf(dorm)] - (dayIndex * dayIndexIncrement);
+                        }
+
+                        dayPriorityTemp /= 2;
+                        if (dayPriorityTemp % 1 == 0.5f)
+                            dayPriorityTemp -= 0.5f;
+                        totalPriority += dayPriorityTemp;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < activity.Days.Length; ++i)
+                    {
+                        var day = activity.Days[i].Value;
+                        int dayIndex = i + 1;
+                        float dayPriorityTemp = 0;
+
+                        foreach (var dorm in day)
+                        {
+                            dayPriorityTemp += dormsNumDays[dormIndices.IndexOf(dorm)] - (dayIndex * dayIndexIncrement);
+                        }
+                        
+                        totalPriority += dayPriorityTemp;
+                    }
+                }
+
+                if (activityInfo.Flags.HasFlag(ActivityFlags.Repeatable))
+                    totalPriority /= 1.5f;
+                if (activityInfo.Flags.HasFlag(ActivityFlags.Concurrent))
+                {
+                    if (activityInfo.MaxConcurrent > 1)
+                        totalPriority /= activityInfo.MaxConcurrent;
+                    else
+                        totalPriority /= 2;
+                }
+
+                if (activityInfo.Flags.HasFlag(ActivityFlags.Exclusive))
+                    totalPriority /= (float)Schedule.Dorms.Count(d => d.AllowedExclusiveActivities.Contains(activityInfo.ID)) / Schedule.Dorms.Count;
+
+                Console.WriteLine(activity.Name + " - " + totalPriority.ToString("#.0"));
+
+                activityTotalPriorities.Add(activity.Name, totalPriority);
+                activityGirlPriorities.Add(activity.Name, 0);
+                activityBoyPriorities.Add(activity.Name, 0);
+                activityYoungPriorities.Add(activity.Name, 0);
+                activityOldPriorities.Add(activity.Name, 0);
+            }
+
+            Console.WriteLine(activityTotalPriorities.OrderByDescending(a => a.Value).Select(a => a.Key).ToArrayString());
+
+            /*int dayPriority = 4;
             foreach(var day in days)
             {
                 foreach(var activity in day.Activities)
@@ -278,7 +352,7 @@ namespace CampSchedulesTesting
             PrintDict(activityGirlPriorities, "Girls");
             PrintDict(activityBoyPriorities, "Boys");
             PrintDict(activityYoungPriorities.ToDictionary(kv => kv.Key, kv => (int)Math.Round(kv.Value)), "Young");
-            PrintDict(activityOldPriorities, "Old");
+            PrintDict(activityOldPriorities, "Old");*/
 
             /*var exclusivesDict = new SortedDictionary<string, List<KeyValuePair<string, bool>>>(
                 Schedule.Activities.Where(

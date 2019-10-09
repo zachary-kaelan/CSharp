@@ -8,7 +8,7 @@ namespace CampSchedulesLib_v2.Models
 {
     public class Thing : IEquatable<Thing>
     {
-        public int ID { get; private set; }
+        public int ID { get; protected set; }
         public string Abbreviation { get; protected set; }
 
         public Thing()

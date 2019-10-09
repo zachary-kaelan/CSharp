@@ -8,22 +8,42 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace TinderPlus.Properties
-{
-
-
+namespace TinderPlus.Properties {
+    
+    
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "11.0.0.0")]
-    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase
-    {
-
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "15.9.0.0")]
+    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
+        
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
-
-        public static Settings Default
-        {
-            get
-            {
+        
+        public static Settings Default {
+            get {
                 return defaultInstance;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("eyJhbGciOiJIUzI1NiJ9.MTkxOTQxMDEyNDA.jl3uQI3jfEMq6ZPHUY1zG6iYelYqL-c2OUER-sSwRD0")]
+        public string refresh_token {
+            get {
+                return ((string)(this["refresh_token"]));
+            }
+            set {
+                this["refresh_token"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2019-07-13")]
+        public global::System.DateTime top_picks_refresh {
+            get {
+                return ((global::System.DateTime)(this["top_picks_refresh"]));
+            }
+            set {
+                this["top_picks_refresh"] = value;
             }
         }
     }

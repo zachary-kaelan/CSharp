@@ -1,0 +1,2 @@
+FOR /F "tokens=*" %%G in ('dir /B *.proto') DO (protoc --proto_path="C:\Users\ZACH-GAMING\Documents\Visual Studio 2017\Projects\VectorTesting\VectorTesting" --chsarp_out=proto "anki_vector/messaging/%%G")
+pause

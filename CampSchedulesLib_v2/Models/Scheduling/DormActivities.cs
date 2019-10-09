@@ -23,6 +23,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
         public SortedSet<int> RepeatableTodayHistory { get; private set; }
         public SortedSet<int> RepeatableDoubleHistory { get; private set; }
         public SortedSet<int> OtherDormsDoneToday { get; private set; }
+        public SortedSet<int> ActivitiesDoneToday { get; private set; }
         public List<InterDormTracking> UsedUpOtherDorms { get; private set; }
         private int TotalManualDuration { get; set; }
         public int TotalActivityDuration { get; private set; }
@@ -37,6 +38,29 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             }
         }
         //public int RemainderPriority { get; private set; }
+
+        public DormActivities(DormActivities upstream)
+        {
+            Dorm = upstream.Dorm;
+
+            ScheduleHistory = new SortedSet<string>();
+            AvailableActivities = new SortedSet<int>();
+            ActivityPriorities = new SortedDictionary<int, int>(upstream.ActivityPriorities);
+
+            OtherDorms = new SortedSet<int>();
+            DormPriorities = new SortedDictionary<int, InterDormTracking>();
+            RepeatableHistory = new SortedSet<int>();
+            RepeatableTodayHistory = new SortedSet<int>();
+            RepeatableDoubleHistory = new SortedSet<int>();
+
+            AvailableActivitiesToday = new SortedSet<int>();
+            AvailableMultiDormActivities = new SortedSet<int>();
+            AvailableMultiDormActivitiesToday = new SortedSet<int>();
+            ActivitiesDoneToday = new SortedSet<int>();
+
+            OtherDormsDoneToday = new SortedSet<int>();
+            UsedUpOtherDorms = new List<InterDormTracking>();
+        }
 
         public DormActivities(DormInfo dorm, IDictionary<int, int> priorities)
         {
@@ -66,70 +90,154 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             AvailableMultiDormActivities = new SortedSet<int>(AvailableActivities);
             AvailableMultiDormActivities.IntersectWith(ActivityInfo.MultiDormActivities);
             AvailableMultiDormActivitiesToday = new SortedSet<int>();
+            ActivitiesDoneToday = new SortedSet<int>();
 
             OtherDormsDoneToday = new SortedSet<int>();
             UsedUpOtherDorms = new List<InterDormTracking>();
             //RemainderPriority = 0;
         }
 
-        internal int ClearFromHistory(ScheduledActivity scheduled, bool ignoreHasOther = false)
+        internal void ClearFromPrevDay(ScheduledActivity scheduledActivity, bool ignoreHasOther = false)
         {
-            ScheduleHistory.Remove(scheduled.Abbreviation);
-            var activity = Schedule.Activities[scheduled.Activity];
-            bool isRepeatable = activity.Flags.HasFlag(ActivityFlags.Repeatable);
-            TotalScheduledDuration -= scheduled.Duration;
+            ScheduleHistory.Remove(scheduledActivity.Abbreviation);
+            var activity = Schedule.Activities[scheduledActivity.Activity];
 
-            int output = -1;
+            bool repeatable = activity.Flags.HasFlag(ActivityFlags.Repeatable);
+            bool multiDorm = activity.Flags.HasFlag(ActivityFlags.MultiDorm);
 
-            if (!scheduled.HasOther)
+            if (scheduledActivity.HasOther)
             {
-                var tracker = DormPriorities[Dorm];
-                tracker.ScheduleHistory.Remove(scheduled.Abbreviation);
-                tracker.PreviousRepeatableActivities.Remove(scheduled.Activity);
-            }
-
-            if (!isRepeatable || !RepeatableDoubleHistory.Remove(scheduled.Activity))
-            {
-                if (isRepeatable)
+                if (!ignoreHasOther)
                 {
+                    if (!DormPriorities.TryGetValue(scheduledActivity.OtherDorm, out InterDormTracking interDorm))
+                    {
+                        var index = UsedUpOtherDorms.FindIndex(d => d.Dorm == scheduledActivity.OtherDorm);
+                        interDorm = (InterDormTracking)UsedUpOtherDorms[index].Clone();
+                        UsedUpOtherDorms.RemoveAt(index);
+                        DormPriorities.Add(scheduledActivity.OtherDorm, interDorm);
+                    }
+
+                    interDorm.ClearFromHistory(scheduledActivity, repeatable, multiDorm);
+                }
+            }
+            else
+                DormPriorities[Dorm].ClearFromHistory(scheduledActivity, repeatable, multiDorm);
+
+            if (repeatable)
+            {
+                if (RepeatableHistory.Contains(activity.ID))
+                {
+                    // if it wasn't cleared, it was the first time the activity was done by that dorm
                     if (!AvailableActivities.Add(activity.ID))
                         RepeatableHistory.Remove(activity.ID);
-                    RepeatableTodayHistory.Remove(activity.ID);
+                    if (multiDorm)
+                        AvailableMultiDormActivities.Add(activity.ID);
                 }
                 else
-                    AvailableActivities.Add(activity.ID);
+                    throw new NotImplementedException("Activity being cleared hasn't been undergone.");
 
-                AvailableActivitiesToday.Add(activity.ID);
-                if (activity.Flags.HasFlag(ActivityFlags.MultiDorm))
+                if (ActivityPriorities.TryGetValue(activity.ID, out int activityPriority))
                 {
-                    output = 0;
-                    if (AvailableMultiDormActivitiesToday.Add(activity.ID))
-                        output = 1;
-                    if (AvailableMultiDormActivities.Add(activity.ID))
-                        output = 2;
+                    if (++activityPriority == 0)
+                        ActivityPriorities.Remove(activity.ID);
+                }
+                else
+                    ActivityPriorities.Add(activity.ID, 1);
+            }
+            else
+            {
+                if (!AvailableActivities.Add(activity.ID))
+                    throw new NotImplementedException("Activity being cleared hasn't been undergone.");
+                if (multiDorm)
+                    AvailableMultiDormActivities.Add(activity.ID);
+            }
+
+            if (!activity.Flags.HasFlag(ActivityFlags.Manual) && (!activity.Flags.HasFlag(ActivityFlags.Exclusive) || !activity.Flags.HasFlag(ActivityFlags.Excess)))
+                TotalScheduledDuration -= activity.Duration;
+            else
+                TotalManualDuration -= activity.Duration;
+        }
+
+        internal void ClearFromHistory(ScheduledActivity scheduledActivity, bool ignoreHasOther = false)
+        {
+            ScheduleHistory.Remove(scheduledActivity.Abbreviation);
+            var activity = Schedule.Activities[scheduledActivity.Activity];
+
+            bool repeatable = activity.Flags.HasFlag(ActivityFlags.Repeatable);
+            bool multiDorm = activity.Flags.HasFlag(ActivityFlags.MultiDorm);
+
+            if (activity.IncompatibleActivities.Any())
+            {
+                var incompat = new SortedSet<int>(activity.IncompatibleActivities);
+                incompat.ExceptWith(ActivitiesDoneToday);
+                if (incompat.Any())
+                {
+                    AvailableActivitiesToday.UnionWith(incompat);
+                    AvailableMultiDormActivitiesToday.UnionWith(incompat.Intersect(ActivityInfo.MultiDormActivities));
+                }
+            }
+            ActivitiesDoneToday.Remove(activity.ID);
+
+            if (scheduledActivity.HasOther)
+            {
+                if (!ignoreHasOther)
+                {
+                    if (!DormPriorities.TryGetValue(scheduledActivity.OtherDorm, out InterDormTracking interDorm))
+                    {
+                        var index = UsedUpOtherDorms.FindIndex(d => d.Dorm == scheduledActivity.OtherDorm);
+                        interDorm = (InterDormTracking)UsedUpOtherDorms[index].Clone();
+                        UsedUpOtherDorms.RemoveAt(index);
+                        DormPriorities.Add(scheduledActivity.OtherDorm, interDorm);
+                    }
+
+                    interDorm.ClearFromHistory(scheduledActivity, repeatable, multiDorm);
+                    OtherDormsDoneToday.Remove(scheduledActivity.OtherDorm);
                 }
             }
             else
             {
-                //RepeatableTodayHistory.Remove(activity.ID);
+                DormPriorities[Dorm].ClearFromHistory(scheduledActivity, repeatable, multiDorm);
+                OtherDormsDoneToday.Remove(Dorm);
             }
 
-            if (scheduled.HasOther && !ignoreHasOther)
+            if (repeatable)
             {
-                OtherDormsDoneToday.Remove(scheduled.OtherDorm);
-                if (!DormPriorities.ContainsKey(scheduled.OtherDorm))
+                if (RepeatableHistory.Contains(activity.ID))
                 {
-                    var index = UsedUpOtherDorms.FindIndex(d => d.Dorm == scheduled.OtherDorm);
-                    DormPriorities.Add(scheduled.OtherDorm, UsedUpOtherDorms[index]);
-                    UsedUpOtherDorms.RemoveAt(index);
+                    // if it wasn't cleared, it was the first time the activity was done by that dorm
+                    if (!AvailableActivities.Add(activity.ID))
+                        RepeatableHistory.Remove(activity.ID);
+                    if (multiDorm)
+                        AvailableMultiDormActivities.Add(activity.ID);
+                    RepeatableTodayHistory.Remove(activity.ID);
                 }
-                var interDorm = DormPriorities[scheduled.OtherDorm];
-                ++interDorm.Priority;
-                interDorm.AvailableToday = true;
-                interDorm.ScheduleHistory.Remove(scheduled.Abbreviation);
-                interDorm.PreviousRepeatableActivities.Remove(activity.ID);
+                else
+                    throw new NotImplementedException("Activity being cleared hasn't been undergone.");
+
+                if (ActivityPriorities.TryGetValue(activity.ID, out int activityPriority))
+                {
+                    if (++activityPriority == 0)
+                        ActivityPriorities.Remove(activity.ID);
+                }
+                else
+                    ActivityPriorities.Add(activity.ID, 1);
             }
-            return output;
+            else
+            {
+                if (!AvailableActivities.Add(activity.ID))
+                    throw new NotImplementedException("Activity being cleared hasn't been undergone.");
+                if (multiDorm)
+                    AvailableMultiDormActivities.Add(activity.ID);
+            }
+
+            AvailableActivitiesToday.Add(activity.ID);
+            if (multiDorm)
+                AvailableMultiDormActivitiesToday.Add(activity.ID);
+
+            if (!activity.Flags.HasFlag(ActivityFlags.Manual) && (!activity.Flags.HasFlag(ActivityFlags.Exclusive) || !activity.Flags.HasFlag(ActivityFlags.Excess)))
+                TotalScheduledDuration -= activity.Duration;
+            else
+                TotalManualDuration -= activity.Duration;
         }
 
         public void NewDay()
@@ -140,6 +248,7 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             AvailableMultiDormActivitiesToday.UnionWith(AvailableMultiDormActivities);
             OtherDormsDoneToday.Clear();
             RepeatableTodayHistory.Clear();
+            ActivitiesDoneToday.Clear();
             foreach (var otherDorm in DormPriorities.Keys)
             {
                 if (otherDorm != Dorm)
@@ -175,85 +284,129 @@ namespace CampSchedulesLib_v2.Models.Scheduling
             }
         }
 
-        internal bool RecheckCompatibility(DormActivities otherActivities, out bool overlaps)
+        internal void RescheduleActivity(ActivityInfo activity, ScheduledActivity scheduledActivity, bool ignoreOther)
         {
-            overlaps = true;
-            if (!otherActivities.AvailableMultiDormActivitiesToday.Overlaps(AvailableMultiDormActivitiesToday))
+            bool multiDorm = activity.Flags.HasFlag(ActivityFlags.MultiDorm);
+
+            AvailableActivitiesToday.Remove(activity.ID);
+            if (multiDorm)
+                AvailableMultiDormActivitiesToday.Remove(activity.ID);
+
+            if (activity.Flags.HasFlag(ActivityFlags.Repeatable))
+                RepeatableTodayHistory.Add(activity.ID);
+
+            ActivitiesDoneToday.Add(activity.ID);
+            if (activity.IncompatibleActivities.Any())
             {
-                var interDorm = UsedUpOtherDorms.First(d => d.Dorm == otherActivities.Dorm);
-                interDorm.Options = 0;
-                if (!otherActivities.AvailableMultiDormActivities.Overlaps(AvailableMultiDormActivities))
-                {
-                    interDorm.AvailableToday = false;
-                    UsedUpOtherDorms.Add(interDorm);
-                    DormPriorities.Remove(otherActivities.Dorm);
-                    overlaps = false;
-                }
-                else
-                {
-                    var overlapping = new SortedSet<int>(AvailableMultiDormActivities);
-                    overlapping.IntersectWith(otherActivities.AvailableMultiDormActivities);
-                    if (overlapping.Count == 0)
-                        overlaps = false;
-                }
-                return false;
+                AvailableActivitiesToday.ExceptWith(activity.IncompatibleActivities);
+                AvailableMultiDormActivitiesToday.ExceptWith(activity.IncompatibleActivities);
             }
-            return true;
+
+            if (!ignoreOther && scheduledActivity.HasOther)
+            {
+                if (DormPriorities.TryGetValue(scheduledActivity.OtherDorm, out InterDormTracking interDorm))
+                    interDorm.RescheduleActivity(!OtherDormsDoneToday.Add(scheduledActivity.OtherDorm));
+            }
+            else
+                OtherDormsDoneToday.Add(Dorm);
         }
 
-        public void ScheduleActivity(ActivityInfo activity, string scheduled, bool clear = true)
+        public void ScheduleActivity(ActivityInfo activity, ScheduledActivity scheduledActivity)
         {
             if (!activity.Flags.HasFlag(ActivityFlags.Manual) && (!activity.Flags.HasFlag(ActivityFlags.Exclusive) || !activity.Flags.HasFlag(ActivityFlags.Excess)))
                 TotalScheduledDuration += activity.Duration;
             else
                 TotalManualDuration += activity.Duration;
 
+            bool repeatable = activity.Flags.HasFlag(ActivityFlags.Repeatable);
+            bool multiDorm = activity.Flags.HasFlag(ActivityFlags.MultiDorm);
             AvailableActivitiesToday.Remove(activity.ID);
-            if (activity.Flags.HasFlag(ActivityFlags.MultiDorm))
+            if (multiDorm)
                 AvailableMultiDormActivitiesToday.Remove(activity.ID);
 
-            bool repeatable = activity.Flags.HasFlag(ActivityFlags.Repeatable);
+            bool clear = !repeatable;
+            if (repeatable)
+            {
+                if (!RepeatableHistory.Add(activity.ID))
+                    clear = true;
+                else
+                {
+                    if (ActivityPriorities.TryGetValue(activity.ID, out int activityPriority))
+                    {
+                        if (--activityPriority == 0)
+                            ActivityPriorities.Remove(activity.ID);
+                    }
+                    else
+                        ActivityPriorities.Add(activity.ID, -1);
+                }
+                /*if (!RepeatableTodayHistory.Add(activity.ID))
+                    throw new IndexOutOfRangeException("Activity repeated twice the same day.");*/
+            }
+
             if (clear)
             {
                 AvailableActivities.Remove(activity.ID);
-                if (repeatable)
-                {
-                    RepeatableHistory.Add(activity.ID);
-                    RepeatableTodayHistory.Add(activity.ID);
-                }
-                if (activity.Flags.HasFlag(ActivityFlags.MultiDorm))
-                    AvailableMultiDormActivities.Remove(activity.ID);
-            }
-            else if (repeatable)
-            {
-                RepeatableTodayHistory.Add(activity.ID);
-                if (!RepeatableHistory.Add(activity.ID) && !AvailableActivities.Remove(activity.ID))
-                    RepeatableDoubleHistory.Add(activity.ID);
-                else if (activity.Flags.HasFlag(ActivityFlags.MultiDorm))
+                if (multiDorm)
                     AvailableMultiDormActivities.Remove(activity.ID);
             }
 
-            ScheduleHistory.Add(scheduled);
+            ActivitiesDoneToday.Add(activity.ID);
+            if (activity.IncompatibleActivities.Any())
+            {
+                AvailableActivitiesToday.ExceptWith(activity.IncompatibleActivities);
+                AvailableMultiDormActivitiesToday.ExceptWith(activity.IncompatibleActivities);
+            }
+
+            ScheduleHistory.Add(scheduledActivity.Abbreviation);
+            if (scheduledActivity.HasOther)
+            {
+                if (scheduledActivity.Dorm == Dorm)
+                {
+                    if (
+                        DormPriorities.TryGetValue(
+                            scheduledActivity.OtherDorm, 
+                            out InterDormTracking otherDorm
+                        ) && otherDorm.ScheduleActivity(
+                            scheduledActivity, 
+                            !OtherDormsDoneToday.Add(scheduledActivity.OtherDorm), 
+                            repeatable, multiDorm
+                        )
+                    ) {
+                        UsedUpOtherDorms.Add((InterDormTracking)otherDorm.Clone());
+                        DormPriorities.Remove(scheduledActivity.OtherDorm);
+                    }
+                }
+            }
+            else
+            {
+                DormPriorities[Dorm].ScheduleActivity(scheduledActivity, false, repeatable, multiDorm);
+                OtherDormsDoneToday.Add(Dorm);
+            }
         }
 
         public object Clone()
         {
-            var clone = new DormActivities(Schedule.Dorms[Dorm], ActivityPriorities)
+            var clone = new DormActivities(this)
             {
-                OtherDorms = this.OtherDorms,
                 TotalManualDuration = this.TotalManualDuration,
                 TotalScheduledDuration = this.TotalScheduledDuration,
                 TotalActivityDuration = this.TotalActivityDuration
             };
+
+            clone.ScheduleHistory.UnionWith(this.ScheduleHistory);
             clone.AvailableActivities.UnionWith(this.AvailableActivities);
-            clone.AvailableActivitiesToday.UnionWith(this.AvailableActivitiesToday);
-            clone.AvailableMultiDormActivities.UnionWith(this.AvailableMultiDormActivities);
-            clone.AvailableMultiDormActivitiesToday.UnionWith(this.AvailableMultiDormActivitiesToday);
+
+            clone.OtherDorms.UnionWith(this.OtherDorms);
             clone.RepeatableHistory.UnionWith(this.RepeatableHistory);
             clone.RepeatableTodayHistory.UnionWith(this.RepeatableTodayHistory);
             clone.RepeatableDoubleHistory.UnionWith(this.RepeatableDoubleHistory);
+
+            clone.AvailableActivitiesToday.UnionWith(this.AvailableActivitiesToday);
+            clone.AvailableMultiDormActivities.UnionWith(this.AvailableMultiDormActivities);
+            clone.AvailableMultiDormActivitiesToday.UnionWith(this.AvailableMultiDormActivitiesToday);
+            clone.ActivitiesDoneToday.UnionWith(this.ActivitiesDoneToday);
+
             clone.OtherDormsDoneToday.UnionWith(this.OtherDormsDoneToday);
-            clone.ScheduleHistory.UnionWith(this.ScheduleHistory);
 
             var keys = this.DormPriorities.Keys.ToArray();
             for (int i = 0; i < keys.Length; ++i)

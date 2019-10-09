@@ -14,6 +14,8 @@ namespace PressingMatters
 {
     public partial class Form1 : Form
     {
+        private Matter[] _matters;
+
         public Form1()
         {
             InitializeComponent();
@@ -32,7 +34,12 @@ namespace PressingMatters
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            API.
+            //API.
+        }
+
+        private void pbxPicture_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

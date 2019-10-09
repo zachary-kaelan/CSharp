@@ -13,31 +13,31 @@ namespace FromTheDepthsUtility
 
         public static float ResourceGenerationRate(float growthRate, float maxResources, float currentResources)
         {
-            return (0.1 * growthRate * maxResources) / Math.Max(10f, currentResources);
+            return (0.1f * growthRate * maxResources) / Math.Max(10f, currentResources);
             // Resource generation is maximizd when current resources reaches 10.
             // Max rate is gR / 100
         }
 
         public static float GatheringRatePerComponent(float currentResources)
         {
-            return 0.05 * Math.Pow(currentResources, 0.5);
+            return 0.05f * (float)Math.Pow(currentResources, 0.5);
         }
 
         public static float SteadyStateResourceLevel(float growthRate, float maxResources, float numberOfMachines)
         {
-            return Math.Pow((2f * growthRate * maxResources) / numberOfMachines, 2f / 3f);
+            return (float)Math.Pow((2f * growthRate * maxResources) / numberOfMachines, 2f / 3f);
         }
 
         // When below maximum
         public static float SteadyStateExtractionRate(float growthRate, float maxResources, float numberOfMachines)
         {
-            return 0.5 * Math.Pow(numberOfMachines, 2f / 3f) * Math.Pow(2f * growthRate * maxResources, 1f / 3f);
+            return 0.5f * (float)Math.Pow(numberOfMachines, 2f / 3f) * (float)Math.Pow(2f * growthRate * maxResources, 1f / 3f);
         }
 
         public static float MachinesForMaxExtractionRate(float growthRate, float maxResources)
         {
             // Assuming continuous gathering
-            return (2f * growthRate * maxResources) / Math.Pow(10f, 1.5);
+            return (2f * growthRate * maxResources) / (float)Math.Pow(10f, 1.5);
         }
 
         // Each cubic meter of resource storage stores 2000 units
@@ -58,12 +58,12 @@ namespace FromTheDepthsUtility
         // y = altitude of refinery
         public static float ProcessingEfficiency(float crackers, float cokers, float desalters, float altitude)
         {
-            return ((10f * ((0.5 * crackers) + 1f) * ((0.3 * cokers) + 1f)) / Math.Max(altitude / 5f, 1f)) * Math.Pow(1.1, Math.Min(desalters, 1));
+            return ((10f * ((0.5f * crackers) + 1f) * ((0.3f * cokers) + 1f)) / Math.Max(altitude / 5f, 1f)) * (float)Math.Pow(1.1, Math.Min(desalters, 1));
         }
 
         public static float ProcessingTime(float crackers, float cokers, float desalters)
         {
-            return ((1.5 * crackers) + 1f) * ((0.6 * cokers) + 1) * Math.Pow(1.2, Math.Min(desalters, 1));
+            return ((1.5f * crackers) + 1f) * ((0.6f * cokers) + 1) * (float)Math.Pow(1.2, Math.Min(desalters, 1));
         }
 
         // Refineries have a Dangerous (G)as level
@@ -74,9 +74,9 @@ namespace FromTheDepthsUtility
         public static float DangerousGasGeneration(float currentGas, float efficiency, float flares, bool desalter = true)
         {
             return (
-                (0.8 * efficiency) - 
-                ((0.5 + (0.5 * Math.Pow(currentGas, 0.5))) +
-                    (flares * (desalter ? 1.5 : 0.5))
+                (0.8f * efficiency) - 
+                ((0.5f + (0.5f * (float)Math.Pow(currentGas, 0.5))) +
+                    (flares * (desalter ? 1.5f : 0.5f))
                 )
             );
         }
