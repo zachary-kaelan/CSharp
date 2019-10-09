@@ -136,7 +136,7 @@ namespace VTWebLib
                         new Parameter()
                         {
                             Name = "form[password]",
-                            Value = "I15Zac$0208",
+                            Value = "",
                             Type = ParameterType.GetOrPost
                         }
                     }

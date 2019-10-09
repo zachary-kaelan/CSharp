@@ -83,7 +83,7 @@ namespace PostmanLib
         private static IRestRequest tokenPasswordRequest = new RestRequest(Method.POST).AddOrUpdateParameters(
             new Parameter("grant_type", "password", ParameterType.GetOrPost),
             new Parameter("username", "pestpacapi@insightpest.com", ParameterType.GetOrPost),
-            new Parameter("password", "!Pest6547!", ParameterType.GetOrPost)
+            new Parameter("password", "", ParameterType.GetOrPost)
         );
         private static IRestRequest tokenRefreshRequest = new RestRequest(Method.POST).AddOrUpdateParameters(
             new Parameter("grant_type", "refresh_token", ParameterType.GetOrPost),
@@ -100,12 +100,9 @@ namespace PostmanLib
             tokenClient = new RestClient("https://is.workwave.com/oauth2/token?scope=openid");
             tokenClient.AddDefaultHeader("Authorization", "Bearer N2JWMU9wRjFmT1FDSVRNam1fWmpsNjJkcFFZYTpjdXJueTNXb3g0ZUdpREdKTWhWdUI3OVhSSVlh");
             tokenClient.AddDefaultHeader("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
-            /*tokenClient.AddDefaultParameter("grant_type", "password", ParameterType.RequestBody);
-            tokenClient.AddDefaultParameter("username", "pestpacapi@insightpest.com", ParameterType.RequestBody);
-            tokenClient.AddDefaultParameter("password", "!Pest6547!", ParameterType.RequestBody);*/
 
             client = new RestClient("https://api.workwave.com/pestpac/v1/");
-            client.AddDefaultHeader("apikey", "Ac1jfgugSAmy6mpj1AGnYzrAdV9HfLPc");
+            client.AddDefaultHeader("apikey", "");
             client.AddDefaultHeader("tenant-id", "323480");
             client.AddDefaultHeader("Authorization", "");
 
