@@ -41,35 +41,43 @@ namespace DNALib
         Start_Nonpolar = 4,
         Stop = 8
     }
-    
-    public enum DNACodon
+
+    [Flags]
+    public enum DNACodonFlags
     {
         NIL = 0,
-        Phe = 1,
-        Leu = 2,
-        Ile = 4,
-        Met = 8,
-        Val = 16,
+        Phe = 1,        // F    Phenylalanine
+        Leu = 2,        // L    Leucine
+        Ile = 4,        // I    Isoleucine
+        Met = 8,        // M    Methionine
+        Val = 16,       // V    Valine
 
-        Ser = 32,
-        Pro = 64,
-        Thr = 128,
-        Ala = 256,
+        Ser = 32,       // S    Serine
+        Pro = 64,       // P    Propine
+        Thr = 128,      // T    Threonine
+        Ala = 256,      // A    Alanine
 
-        Och = 512,
-        Amb = 1024,
-        His = 2048,
-        Gln = 4096,
-        Asn = 8192,
-        Lys = 16384,
-        Asp = 32768,
-        Glu = 65536,
+        Tyr = 512,      // Y    Tyrosine
+        Och = 1024,     // Stop Ochre
+        Pyl = 2048,     // O    Pyrrolysine/Amber
+        His = 4096,     // H    Histidine
+        Gln = 8192,     // Q    Glutamine
+        Asn = 16384,    // N    Asparagine
+        Lys = 32768,    // K    Lysine
+        Asp = 65536,    // D    Aspartic acid
+        Glu = 131072,   // E    Glutamic acid
+        Cys = 262144,   // C    Cysteine
+        Sec = 524288,   // U    Selenocysteine/Opal (or umber, in DNA)
+        Trp = 1048576,  // W    Tryptophan
+        Arg = 2097152,  // R    Arginine
+        Gly = 4194304,  // G    Glycine
 
-        Cys = 131072,
-        Opl = 262144,
-        Trp = 524288,
-        Arg = 1048576,
-        Gly = 2097152
+        B = Asp | Asn,
+        J = Leu | Ile,
+        Z = Glu | Gln,
+        X = 8388607,
+
+        STOP = Och | Pyl | Sec
     }
 
     internal static class Constants

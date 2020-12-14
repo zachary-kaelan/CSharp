@@ -51,18 +51,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GeneticAlgorithm\Gene.cs" />
-    <Compile Include="GeneticAlgorithm\CrossoverAlgorithms.cs" />
-    <Compile Include="GeneticAlgorithm\Evolution.cs" />
-    <Compile Include="GeneticAlgorithm\GenePool.cs" />
-    <Compile Include="GeneticAlgorithm\GenericNumberMethodTemplate.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>GenericNumberMethodTemplate.tt</DependentUpon>
-    </Compile>
-    <Compile Include="GeneticAlgorithm\Chromosome.cs" />
-    <Compile Include="GeneticAlgorithm\IChromosome.cs" />
-    <Compile Include="GeneticAlgorithm\GeneParameter.cs" />
     <Compile Include="Helpers\EnumHelper.cs" />
     <Compile Include="Models\AbstractCodonSequence.cs" />
     <Compile Include="Models\AbstractReadingFrame.cs" />
@@ -89,12 +77,6 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="GeneticAlgorithm\GenericNumberMethodTemplate.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>GenericNumberMethodTemplate.cs</LastGenOutput>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
